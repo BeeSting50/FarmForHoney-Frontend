@@ -1,0 +1,212 @@
+/* Bee Card Styles */
+.bee-card {
+  background: linear-gradient(135deg, #2a1810 0%, #3d2817 100%);
+  border: 2px solid #8B4513;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bee-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.bee-card-content {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.bee-actions-dropdown {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.bee-action-select {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  border: 2px solid #d35400;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.bee-action-select:hover {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.bee-action-select option {
+  background: #2c3e50;
+  color: white;
+  padding: 8px;
+}
+
+.bee-image-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(45deg, #8B4513, #A0522D);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bee-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.bee-image:hover {
+  transform: scale(1.05);
+}
+
+.bee-placeholder {
+  font-size: 48px;
+  color: #FFD700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.bee-info {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.bee-name {
+  font-weight: bold;
+  color: #f39c12;
+  margin-bottom: 0.3rem;
+  font-size: 1rem;
+}
+
+.bee-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bee-stats span {
+  font-size: 0.9rem;
+  color: #bdc3c7;
+}
+
+.health-section {
+  margin-top: 0.5rem;
+}
+
+.health-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.health-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.health-label {
+  font-size: 0.9rem;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.hunger-value {
+  font-size: 0.8rem;
+  color: #95a5a6;
+  opacity: 0.8;
+}
+
+.health-bar {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.health-fill {
+  height: 100%;
+  background: #e74c3c;
+  transition: width 0.3s ease;
+  border-radius: 5px;
+}
+
+/* Unstaked bees styles */
+.bee-card.unstaked {
+  border: 2px dashed #f39c12;
+  background: rgba(243, 156, 18, 0.1);
+  opacity: 0.9;
+}
+
+.bee-card.unstaked:hover {
+  opacity: 1;
+  border-color: #e67e22;
+  background: rgba(243, 156, 18, 0.15);
+}
+
+.stake-btn {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  border: 2px solid #229954;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stake-btn:hover {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.unstaked-status {
+  margin-top: 0.5rem;
+}
+
+.status-badge {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}

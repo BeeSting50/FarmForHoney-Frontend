@@ -1,0 +1,54 @@
+/* Dashboard Styles */
+.App.dashboard {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  overflow: hidden;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* .hives-section styles removed - no specific styles needed */
+
+.hives-section h2 {
+  margin: 0 0 2rem 0;
+  color: #f39c12;
+  font-size: 2rem;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.loading {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #bdc3c7;
+  padding: 2rem;
+}
+
+.hives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.no-hives {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.no-hives h3 {
+  color: #f39c12;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.no-hives p {
+  color: #bdc3c7;
+  font-size: 1.1rem;
+}
