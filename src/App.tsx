@@ -4,7 +4,7 @@ import { WebRenderer } from '@wharfkit/web-renderer'
 import { WalletPluginCloudWallet } from '@wharfkit/wallet-plugin-cloudwallet'
 import { WalletPluginAnchor } from '@wharfkit/wallet-plugin-anchor'
 import { WalletPluginWombat } from '@wharfkit/wallet-plugin-wombat'
-import { LoginPage, Dashboard } from './components'
+import { LoginPage, Dashboard, EarningsPopup } from './components'
 import './App.css'
 
 interface ResourceBalance {
@@ -71,6 +71,8 @@ function App() {
   const [, setLoadingBees] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
+  const [showEarningsPopup, setShowEarningsPopup] = useState(false)
+  const [earnings, setEarnings] = useState<ResourceBalance[]>([])
 
   const networks = {
     mainnet: {
@@ -484,6 +486,9 @@ function App() {
     }
     
     try {
+      // Capture resource balances before claiming
+      const balancesBefore = [...resourceBalances]
+      
       const network = networks[selectedNetwork]
       const action = {
         account: network.contractAccount,
@@ -503,6 +508,55 @@ function App() {
       // Refresh data after successful claim
       await fetchResourceBalances()
       await fetchStakedHives()
+      
+      // Calculate earnings by fetching fresh balances and comparing
+      const calculateEarnings = async () => {
+        try {
+          // Fetch fresh balances after claim
+          const network = networks[selectedNetwork]
+          const result = await session.client.v1.chain.get_table_rows({
+            code: network.contractAccount,
+            scope: session.actor.toString(),
+            table: 'resources',
+            limit: 100
+          })
+          
+          const balancesAfter = result.rows || []
+          const earningsData: ResourceBalance[] = []
+          
+          // Create a map of before balances for easy lookup
+          const beforeMap = new Map<string, number>()
+          balancesBefore.forEach(balance => {
+            const amount = typeof balance.amount === 'string' ? parseFloat(balance.amount) : balance.amount
+            beforeMap.set(balance.key_id, amount)
+          })
+          
+          // Calculate differences
+          balancesAfter.forEach((afterBalance: any) => {
+            const afterAmount = typeof afterBalance.amount === 'string' ? parseFloat(afterBalance.amount) : afterBalance.amount
+            const beforeAmount = beforeMap.get(afterBalance.key_id) || 0
+            const earned = afterAmount - beforeAmount
+            
+            if (earned > 0) {
+              earningsData.push({
+                key_id: afterBalance.key_id,
+                amount: earned,
+                resource_name: afterBalance.resource_name
+              })
+            }
+          })
+          
+          return earningsData
+        } catch (err) {
+          console.error('Failed to calculate earnings:', err)
+          return []
+        }
+      }
+      
+      // Calculate and show earnings
+      const calculatedEarnings = await calculateEarnings()
+      setEarnings(calculatedEarnings)
+      setShowEarningsPopup(true)
       
     } catch (err) {
       console.error('Failed to claim resources:', err)
@@ -767,25 +821,32 @@ function App() {
   }
 
   return (
-    <Dashboard
-          session={session}
-          selectedNetwork={selectedNetwork}
-          resourceBalances={resourceBalances}
-          stakedHives={stakedHives}
-          beeAssets={beeAssets}
-          unstakedBees={unstakedBees}
-          loadingHives={loadingHives}
-          mobileMenuOpen={mobileMenuOpen}
-          onNetworkChange={handleNetworkChange}
-          onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-          onLogout={handleLogout}
-          onClaimResources={claimResources}
-          onFeedBee={feedBee}
-          onUnstakeBee={unstakeBee}
-          onStakeBee={stakeBee}
-          onUpgradeHive={upgradeHive}
-          getEarningRates={getEarningRates}
-        />
+    <>
+      <Dashboard
+            session={session}
+            selectedNetwork={selectedNetwork}
+            resourceBalances={resourceBalances}
+            stakedHives={stakedHives}
+            beeAssets={beeAssets}
+            unstakedBees={unstakedBees}
+            loadingHives={loadingHives}
+            mobileMenuOpen={mobileMenuOpen}
+            onNetworkChange={handleNetworkChange}
+            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onLogout={handleLogout}
+            onClaimResources={claimResources}
+            onFeedBee={feedBee}
+            onUnstakeBee={unstakeBee}
+            onStakeBee={stakeBee}
+            onUpgradeHive={upgradeHive}
+            getEarningRates={getEarningRates}
+          />
+      <EarningsPopup
+        isOpen={showEarningsPopup}
+        onClose={() => setShowEarningsPopup(false)}
+        earnings={earnings}
+      />
+    </>
   )
 }
 
