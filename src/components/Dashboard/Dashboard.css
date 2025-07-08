@@ -14,6 +14,10 @@
   overflow-y: auto;
 }
 
+.dashboard-resources {
+  margin-bottom: 2rem;
+}
+
 /* .hives-section styles removed - no specific styles needed */
 
 .hives-section h2 {

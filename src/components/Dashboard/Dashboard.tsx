@@ -1,6 +1,7 @@
 import React from 'react'
 import Header from '../Header'
 import HiveCard from '../HiveCard'
+import ResourceBalances from '../ResourceBalances'
 import { Session } from '@wharfkit/session'
 import './Dashboard.css'
 
@@ -21,7 +22,8 @@ interface BeeAsset {
   }
   immutable_data: {
     name?: string
-    type?: string
+    Type?: string
+    Rarity?: string
     rarity?: string
     farmResource?: string
     img?: string
@@ -60,6 +62,8 @@ interface DashboardProps {
   onFeedBee: (beeId: string) => void
   onUnstakeBee: (hiveId: string, beeId: string) => void
   onStakeBee: (hiveId: string, beeId: string) => void
+  onUpgradeHive: (hiveId: string) => void
+  getEarningRates: (beeType: string, beeRarity: string) => Promise<number[]>
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -77,7 +81,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   onClaimResources,
   onFeedBee,
   onUnstakeBee,
-  onStakeBee
+  onStakeBee,
+  onUpgradeHive,
+  getEarningRates
 }) => {
   return (
     <div className="App dashboard">
@@ -92,6 +98,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       />
 
       <div className="dashboard-content">
+        <ResourceBalances 
+          resourceBalances={resourceBalances}
+          className="dashboard-resources"
+        />
+        
         <div className="hives-section">
           {loadingHives ? (
             <div className="loading">Loading hives...</div>
@@ -112,6 +123,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                     onFeedBee={onFeedBee}
                     onUnstakeBee={onUnstakeBee}
                     onStakeBee={onStakeBee}
+                    onUpgradeHive={onUpgradeHive}
+                    getEarningRates={getEarningRates}
                   />
                 )
               })}

@@ -38,7 +38,8 @@ interface BeeAsset {
   }
   immutable_data: {
     name?: string
-    type?: string
+    Type?: string
+    Rarity?: string
     rarity?: string
     farmResource?: string
     img?: string
@@ -52,7 +53,16 @@ function App() {
   const [sessionKit, setSessionKit] = useState<SessionKit | null>(null)
   const [, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet')
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>(() => {
+    // Restore selected network from localStorage on app load
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('honeyfarmers-selected-network')
+      if (stored && (stored === 'mainnet' || stored === 'testnet')) {
+        return stored as NetworkType
+      }
+    }
+    return 'mainnet'
+  })
   const [resourceBalances, setResourceBalances] = useState<ResourceBalance[]>([])
   const [stakedHives, setStakedHives] = useState<StakedHive[]>([])
   const [beeAssets, setBeeAssets] = useState<BeeAsset[]>([])  
@@ -60,23 +70,32 @@ function App() {
   const [loadingHives, setLoadingHives] = useState(false)
   const [, setLoadingBees] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
 
   const networks = {
     mainnet: {
-      id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
-      url: 'https://wax.greymass.com',
+      chain: {
+        id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+        url: 'https://wax.greymass.com',
+        name: 'WAX'
+      },
       contractAccount: 'farmforhoney' // Replace with actual contract account
     },
     testnet: {
-      id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
-      url: 'https://testnet.waxsweden.org',
+      chain: {
+        id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
+        url: 'https://testnet.waxsweden.org',
+        name: 'WAX Testnet'
+      },
       contractAccount: 'farmforhoney' // Replace with actual testnet contract account
     }
   }
 
   useEffect(() => {
-    initializeSessionKit()
-  }, [selectedNetwork])
+    if (!isInitializing) {
+      initializeSessionKit()
+    }
+  }, [selectedNetwork, isInitializing])
 
   useEffect(() => {
     if (session) {
@@ -99,17 +118,142 @@ function App() {
     }
   }, [mobileMenuOpen])
 
-  const initializeSessionKit = () => {
+  // Session persistence helpers
+  const SESSION_STORAGE_KEY = 'honeyfarmers-session-data'
+  const NETWORK_STORAGE_KEY = 'honeyfarmers-selected-network'
+  const SESSION_EXPIRY_DAYS = 7
+
+  // Save selected network to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(NETWORK_STORAGE_KEY, selectedNetwork)
+    }
+  }, [selectedNetwork])
+
+  const saveSessionData = (sessionData: any, network: string) => {
+    if (typeof window !== 'undefined') {
+      const expiryDate = new Date()
+      expiryDate.setDate(expiryDate.getDate() + SESSION_EXPIRY_DAYS)
+      
+      const sessionInfo = {
+        data: sessionData,
+        network: network,
+        expiryDate: expiryDate.toISOString(),
+        createdAt: new Date().toISOString()
+      }
+      
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionInfo))
+      console.log('Session data saved for network:', network, sessionData)
+    }
+  }
+
+  const getStoredSessionData = (currentNetwork: string, allowNetworkSwitch = true) => {
+    if (typeof window === 'undefined') return null
+    
+    try {
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY)
+      if (!stored) {
+        console.log('No stored session data found')
+        return null
+      }
+      
+      const sessionInfo = JSON.parse(stored)
+      const now = new Date()
+      const expiryDate = new Date(sessionInfo.expiryDate)
+      
+      // Check if session is expired
+      if (now > expiryDate) {
+        console.log('Stored session data expired')
+        localStorage.removeItem(SESSION_STORAGE_KEY)
+        return null
+      }
+      
+      // Check if network matches - if not, switch to the stored network (only if allowed)
+      if (sessionInfo.network !== currentNetwork) {
+        if (allowNetworkSwitch) {
+          console.log('Stored session network mismatch:', sessionInfo.network, 'vs', currentNetwork)
+          console.log('Switching to stored session network:', sessionInfo.network)
+          // Update the selected network to match the stored session
+          setSelectedNetwork(sessionInfo.network as NetworkType)
+        }
+        return sessionInfo.data
+      }
+      
+      console.log('Found valid stored session data for network:', currentNetwork, sessionInfo.data)
+      return sessionInfo.data
+    } catch (err) {
+      console.warn('Failed to parse stored session data:', err)
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      return null
+    }
+  }
+
+  const clearSessionData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+    }
+  }
+
+  const clearNetworkSpecificStorage = (preserveSessionKit = false) => {
+    if (typeof window !== 'undefined') {
+      if (!preserveSessionKit) {
+        // Clear all wharf-related storage when doing a full logout
+        const keysToRemove = ['wharf-session', 'wharf-session-kit', 'wharfkit-session', 'wharfkit-sessionkit']
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key)
+          sessionStorage.removeItem(key)
+        })
+        
+        // Clear any keys that might contain old chain-specific data
+        Object.keys(localStorage).forEach(key => {
+          if (key === SESSION_STORAGE_KEY) return // Preserve our session data
+          if (key.includes('wharf') || key.includes('chain')) {
+            localStorage.removeItem(key)
+          }
+        })
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('wharf') || key.includes('chain')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+      } else {
+        // Only clear potentially conflicting chain-specific data, preserve SessionKit storage
+        Object.keys(localStorage).forEach(key => {
+          if (key === SESSION_STORAGE_KEY) return // Preserve our session data
+          if (key.includes('chain') && !key.includes('wharf')) {
+            localStorage.removeItem(key)
+          }
+        })
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('chain') && !key.includes('wharf')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+      }
+    }
+  }
+
+  const initializeSessionKit = async () => {
+    if (isInitializing) return
+    setIsInitializing(true)
+    
     const network = networks[selectedNetwork]
+    
+    // Check for stored session data first
+    const storedSession = getStoredSessionData(selectedNetwork, true)
+    
+    // If stored session is for a different network, clear conflicting storage first
+    if (storedSession && storedSession.chainId !== network.chain.id) {
+      console.log('Stored session chain ID mismatch, clearing conflicting storage')
+      clearNetworkSpecificStorage(true)
+      setIsInitializing(false)
+      return // Exit early to let the network switch trigger a new initialization
+    }
+    
     const kit = new SessionKit({
       appName: 'HoneyFarmers',
-      chains: [
-        {
-          id: network.id,
-          url: network.url,
-          name: selectedNetwork === 'mainnet' ? 'WAX' : 'WAX Testnet'
-        },
-      ],
+      chains: [network.chain],
       ui: new WebRenderer(),
       walletPlugins: [
         new WalletPluginCloudWallet(),
@@ -119,15 +263,49 @@ function App() {
     })
     setSessionKit(kit)
 
-    // Check for existing session with error handling
-    kit.restore().then((restored) => {
+    // If we have stored session data for the current network, try to restore
+    if (storedSession && storedSession.chainId === network.chain.id) {
+      try {
+        const restored = await kit.restore()
+        if (restored && restored.actor.toString() === storedSession.actor) {
+          // Session restored successfully and matches our stored data
+          setSession(restored)
+          console.log('Session restored successfully from storage')
+          return
+        } else {
+          console.warn('Restored session does not match stored data, clearing stored session')
+          clearSessionData()
+        }
+      } catch (err) {
+        console.warn('Failed to restore session:', err)
+        // Clear stored data if restoration fails
+        clearSessionData()
+      }
+    }
+    
+    // If no valid stored session or restoration failed, clear conflicting storage
+    if (!storedSession || storedSession.chainId !== network.chain.id) {
+      clearNetworkSpecificStorage(true)
+    }
+    
+    // Try one more restore attempt after clearing conflicting storage
+    try {
+      const restored = await kit.restore()
       if (restored) {
         setSession(restored)
+        // Save the restored session for future persistence
+        saveSessionData({
+          actor: restored.actor.toString(),
+          permission: restored.permission.toString(),
+          chainId: restored.chain.id.toString()
+        }, selectedNetwork)
+        console.log('Session restored after clearing conflicting storage')
       }
-    }).catch((err) => {
-      console.warn('Failed to restore session:', err)
-      // Don't set error state for restore failures as it's not critical
-    })
+    } catch (err) {
+      console.warn('Final restore attempt failed:', err)
+    }
+    
+    setIsInitializing(false)
   }
 
   const fetchResourceBalances = async () => {
@@ -169,7 +347,7 @@ function App() {
         (result.rows || []).map(async (hive: StakedHive) => {
           try {
             // Use AtomicAssets API to get properly deserialized data
-              const apiUrl = `https://test.wax.api.atomicassets.io/atomicassets/v1/assets/${hive.asset_id}`
+              const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${hive.asset_id}`
                const response = await fetch(apiUrl)
                if (response.ok) {
                  const assetData = await response.json()
@@ -212,7 +390,9 @@ function App() {
   }
 
   const fetchBeeAssets = async (hives: StakedHive[]) => {
-    if (!session) return
+    if (!session) {
+      return
+    }
     
     setLoadingBees(true)
     try {
@@ -228,29 +408,31 @@ function App() {
       for (const beeId of allBeeIds) {
         try {
           // Use AtomicAssets API to get properly deserialized data
-            const apiUrl = `https://test.wax.api.atomicassets.io/atomicassets/v1/assets/${beeId}`
+            const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${beeId}`
              const response = await fetch(apiUrl)
              if (response.ok) {
                const assetData = await response.json()
                if (assetData.success && assetData.data) {
                   const asset = assetData.data
 
-                  beeAssets.push({
+                  const processedAsset = {
                     asset_id: asset.asset_id,
                     template_id: asset.template?.template_id,
                     mutable_data: asset.mutable_data || {},
                     immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
-                  })
+                  }
+                  
+                  beeAssets.push(processedAsset)
                 }
              }
         } catch (err) {
-          console.warn(`Failed to fetch bee asset ${beeId}:`, err)
+          // Silently handle individual asset fetch errors
         }
       }
       
       setBeeAssets(beeAssets)
     } catch (err) {
-      console.error('Failed to fetch bee assets:', err)
+      // Silently handle errors
     } finally {
       setLoadingBees(false)
     }
@@ -267,7 +449,7 @@ function App() {
       })
       
       // Fetch user's assets from AtomicAssets API
-      const apiUrl = `https://test.wax.api.atomicassets.io/atomicassets/v1/assets?owner=${session.actor}&collection_name=farmforhoney&schema_name=bees&page=1&limit=100`
+      const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets?owner=${session.actor}&collection_name=farmforhoney&schema_name=bees&page=1&limit=100`
       const response = await fetch(apiUrl)
       
       if (response.ok) {
@@ -312,12 +494,11 @@ function App() {
         }],
         data: {
           owner: session.actor,
-          hive: parseInt(hiveId)
+          hiveitem: parseInt(hiveId)
         }
       }
       
       const result = await session.transact({ actions: [action] })
-      console.log('Claim successful:', result)
       
       // Refresh data after successful claim
       await fetchResourceBalances()
@@ -352,7 +533,6 @@ function App() {
       }
       
       const result = await session.transact({ actions: [action] })
-      console.log('Feed successful:', result)
       
       // Refresh data after successful feed
       await fetchResourceBalances()
@@ -363,8 +543,8 @@ function App() {
       setError(`Failed to feed bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
-  
-  const unstakeBee = async (hiveId: string, beeId: string) => {
+
+  const upgradeHive = async (hiveId: string) => {
     if (!session) {
       setError('No session available')
       return
@@ -374,29 +554,107 @@ function App() {
       const network = networks[selectedNetwork]
       const action = {
         account: network.contractAccount,
-        name: 'unstakebee',
+        name: 'upgradehive',
         authorization: [{
           actor: session.actor,
           permission: session.permission
         }],
         data: {
           owner: session.actor,
-          hive_id: parseInt(hiveId),
-          bee_id: parseInt(beeId)
+          hive_id: parseInt(hiveId)
         }
       }
       
       const result = await session.transact({ actions: [action] })
-      console.log('Unstake successful:', result)
       
-      // Refresh data after successful unstake
+      // Refresh data after successful upgrade
       await fetchResourceBalances()
       await fetchStakedHives()
       
     } catch (err) {
-      console.error('Failed to unstake bee:', err)
-      setError(`Failed to unstake bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      console.error('Failed to upgrade hive:', err)
+      setError(`Failed to upgrade hive: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
+  }
+
+  const getEarningRates = async (beeType: string, beeRarity: string): Promise<number[]> => {
+    if (!session) {
+      return [0, 0, 0, 0]
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      
+      // Check if beeType and beeRarity are valid
+      if (!beeType || !beeRarity) {
+        return [0, 0, 0, 0]
+      }
+      
+      const result = await session.client.v1.chain.get_table_rows({
+        code: network.contractAccount,
+        scope: network.contractAccount,
+        table: 'beevars',
+        limit: 1000,
+        json: true
+      })
+      
+      if (result.rows.length > 0) {
+        const row = result.rows.find((r: any) => 
+           r.type === beeType && r.rarity === beeRarity && r.category === 'earning'
+         )
+        
+        if (row && row.values) {
+          const rates = Array.isArray(row.values) ? row.values : [row.values]
+          // Convert string values to numbers
+          const numericRates = rates.map((rate: any) => parseFloat(rate) || 0)
+          return numericRates
+        }
+      }
+      
+      return [0, 0, 0, 0] // Default values if not found
+    } catch (err) {
+      return [0, 0, 0, 0]
+    }
+  }
+  
+  // TODO: Implement unstakeBee when contract action is ready
+  // const unstakeBee = async (hiveId: string, beeId: string) => {
+  //   if (!session) {
+  //     setError('No session available')
+  //     return
+  //   }
+  //   
+  //   try {
+  //     const network = networks[selectedNetwork]
+  //     const action = {
+  //       account: network.contractAccount,
+  //       name: 'unstakebee',
+  //       authorization: [{
+  //         actor: session.actor,
+  //         permission: session.permission
+  //       }],
+  //       data: {
+  //         owner: session.actor,
+  //         hive_id: parseInt(hiveId),
+  //         bee_id: parseInt(beeId)
+  //       }
+  //     }
+  //     
+  //     const result = await session.transact({ actions: [action] })
+  //     console.log('Unstake successful:', result)
+  //     
+  //     // Refresh data after successful unstake
+  //     await fetchResourceBalances()
+  //     await fetchStakedHives()
+  //     
+  //   } catch (err) {
+  //     console.error('Failed to unstake bee:', err)
+  //     setError(`Failed to unstake bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
+  //   }
+  // }
+  
+  const unstakeBee = async (hiveId: string, beeId: string) => {
+    setError('Unstaking bees is not yet implemented in the contract')
   }
 
   const stakeBee = async (hiveId: string, beeId: string) => {
@@ -423,7 +681,6 @@ function App() {
       }
       
       const result = await session.transact({ actions: [action] })
-      console.log('Stake successful:', result)
       
       // Refresh data after successful stake
       await fetchResourceBalances()
@@ -445,6 +702,14 @@ function App() {
     try {
       const response = await sessionKit.login()
       setSession(response.session)
+      
+      // Save session data for persistence
+      saveSessionData({
+        actor: response.session.actor.toString(),
+        permission: response.session.permission.toString(),
+        chainId: response.session.chain.id.toString()
+      }, selectedNetwork)
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -453,17 +718,29 @@ function App() {
   }
 
   const handleNetworkChange = (network: NetworkType) => {
+    console.log('Network change requested to:', network)
+    
     setSelectedNetwork(network)
+    
+    // Clear current session data - initializeSessionKit will handle restoration
     setSession(null)
     setResourceBalances([])
     setStakedHives([])
     setBeeAssets([])
     setUnstakedBees([])
+    setError(null)
   }
 
   const handleLogout = async () => {
     if (sessionKit && session) {
       await sessionKit.logout()
+      
+      // Clear our persistent session data
+      clearSessionData()
+      
+      // Clear all session-related storage
+      clearNetworkSpecificStorage(false)
+      
       setSession(null)
       setResourceBalances([])
       setStakedHives([])
@@ -491,22 +768,24 @@ function App() {
 
   return (
     <Dashboard
-      session={session}
-      selectedNetwork={selectedNetwork}
-      resourceBalances={resourceBalances}
-      stakedHives={stakedHives}
-      beeAssets={beeAssets}
-      unstakedBees={unstakedBees}
-      loadingHives={loadingHives}
-      mobileMenuOpen={mobileMenuOpen}
-      onNetworkChange={handleNetworkChange}
-      onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-      onLogout={handleLogout}
-      onClaimResources={claimResources}
-      onFeedBee={feedBee}
-      onUnstakeBee={unstakeBee}
-      onStakeBee={stakeBee}
-    />
+          session={session}
+          selectedNetwork={selectedNetwork}
+          resourceBalances={resourceBalances}
+          stakedHives={stakedHives}
+          beeAssets={beeAssets}
+          unstakedBees={unstakedBees}
+          loadingHives={loadingHives}
+          mobileMenuOpen={mobileMenuOpen}
+          onNetworkChange={handleNetworkChange}
+          onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onLogout={handleLogout}
+          onClaimResources={claimResources}
+          onFeedBee={feedBee}
+          onUnstakeBee={unstakeBee}
+          onStakeBee={stakeBee}
+          onUpgradeHive={upgradeHive}
+          getEarningRates={getEarningRates}
+        />
   )
 }
 

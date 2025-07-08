@@ -103,6 +103,16 @@
   font-size: 1rem;
 }
 
+.bee-rarity {
+  margin-bottom: 0.5rem;
+}
+
+.bee-rarity span {
+  font-size: 0.9rem;
+  color: #bdc3c7;
+  font-weight: 600;
+}
+
 .bee-stats {
   display: flex;
   flex-direction: column;
@@ -202,11 +212,50 @@
 }
 
 .status-badge {
-  background: rgba(52, 152, 219, 0.2);
-  color: #3498db;
-  padding: 0.2rem 0.5rem;
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+  padding: 4px 8px;
   border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Earning Rates Styles */
+.earning-rates {
+  margin-top: 0.5rem;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.loading-rates {
+  font-size: 0.8rem;
+  color: #95a5a6;
+  font-style: italic;
+}
+
+.rates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.rate-item {
   font-size: 0.75rem;
+  color: #bdc3c7;
   font-weight: 600;
-  border: 1px solid rgba(52, 152, 219, 0.3);
+  padding: 2px 4px;
+  background: rgba(189, 195, 199, 0.1);
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid rgba(189, 195, 199, 0.2);
+  transition: all 0.2s ease;
+}
+
+.rate-item:hover {
+  background: rgba(189, 195, 199, 0.2);
+  border-color: rgba(189, 195, 199, 0.4);
+  transform: scale(1.02);
 }

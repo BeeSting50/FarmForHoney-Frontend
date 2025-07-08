@@ -11,7 +11,8 @@ interface BeeAsset {
   }
   immutable_data: {
     name?: string
-    type?: string
+    Type?: string
+    Rarity?: string
     rarity?: string
     farmResource?: string
     img?: string
@@ -42,6 +43,8 @@ interface HiveCardProps {
   onFeedBee: (beeId: string) => void
   onUnstakeBee: (hiveId: string, beeId: string) => void
   onStakeBee: (hiveId: string, beeId: string) => void
+  onUpgradeHive: (hiveId: string) => void
+  getEarningRates: (beeType: string, beeRarity: string) => Promise<number[]>
 }
 
 const HiveCard: React.FC<HiveCardProps> = ({
@@ -51,7 +54,9 @@ const HiveCard: React.FC<HiveCardProps> = ({
   onClaimResources,
   onFeedBee,
   onUnstakeBee,
-  onStakeBee
+  onStakeBee,
+  onUpgradeHive,
+  getEarningRates
 }) => {
   return (
     <div className="hive-card">
@@ -73,12 +78,20 @@ const HiveCard: React.FC<HiveCardProps> = ({
       </div>
       <div className="hive-header">
         <h3>{hive.asset_details?.immutable_data?.name || `Hive #${hive.asset_id}`}</h3>
-        <button 
-          className="claim-btn"
-          onClick={() => onClaimResources(hive.asset_id)}
-        >
-          💰 Claim Resources
-        </button>
+        <div className="hive-actions">
+          <button 
+            className="claim-btn"
+            onClick={() => onClaimResources(hive.asset_id)}
+          >
+            💰 Claim Resources
+          </button>
+          <button 
+            className="upgrade-btn"
+            onClick={() => onUpgradeHive(hive.asset_id)}
+          >
+            ⬆️ Upgrade Hive
+          </button>
+        </div>
       </div>
       
       <div className="bees-section">
@@ -93,6 +106,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
                 hiveId={hive.asset_id}
                 onFeed={onFeedBee}
                 onUnstake={onUnstakeBee}
+                getEarningRates={getEarningRates}
               />
             ))}
           </div>
@@ -110,6 +124,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
                       isStaked={false}
                       hiveId={hive.asset_id}
                       onStake={onStakeBee}
+                      getEarningRates={getEarningRates}
                     />
                   ))}
                 </div>
