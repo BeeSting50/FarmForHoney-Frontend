@@ -14,8 +14,11 @@ interface ResourceBalance {
 }
 
 interface StakedHive {
-  asset_id: string
+  hive_id: string
   staked_items: string[]
+  health?: number
+  availableSlots?: number
+  max_slots?: number
   asset_details?: {
     template_id: number
     immutable_data: {
@@ -65,6 +68,8 @@ function App() {
   })
   const [resourceBalances, setResourceBalances] = useState<ResourceBalance[]>([])
   const [stakedHives, setStakedHives] = useState<StakedHive[]>([])
+  const [beevars, setBeevars] = useState<any[]>([])
+  const [hivevars, setHivevars] = useState<any[]>([])
   const [beeAssets, setBeeAssets] = useState<BeeAsset[]>([])  
   const [unstakedBees, setUnstakedBees] = useState<BeeAsset[]>([])
   const [loadingHives, setLoadingHives] = useState(false)
@@ -103,6 +108,8 @@ function App() {
     if (session) {
       fetchResourceBalances()
       fetchStakedHives()
+      fetchBeeVars().then(setBeevars)
+      fetchHiveVars().then(setHivevars)
     }
   }, [session])
 
@@ -331,6 +338,44 @@ function App() {
     }
   }
 
+  const fetchBeeVars = async () => {
+    if (!session) return null
+    
+    try {
+      const network = networks[selectedNetwork]
+      const result = await session.client.v1.chain.get_table_rows({
+        code: network.contractAccount,
+        scope: network.contractAccount,
+        table: 'beevars',
+        limit: 100
+      })
+      
+      return result.rows || []
+    } catch (err) {
+      console.error('Failed to fetch beevars:', err)
+    }
+    return []
+  }
+
+  const fetchHiveVars = async () => {
+    if (!session) return null
+    
+    try {
+      const network = networks[selectedNetwork]
+      const result = await session.client.v1.chain.get_table_rows({
+        code: network.contractAccount,
+        scope: network.contractAccount,
+        table: 'hivevars',
+        limit: 100
+      })
+      
+      return result.rows || []
+    } catch (err) {
+      console.error('Failed to fetch hivevars:', err)
+    }
+    return []
+  }
+
   const fetchStakedHives = async () => {
     if (!session) return
     
@@ -346,34 +391,83 @@ function App() {
       
       // Fetch hive asset details from AtomicAssets API
       const hivesWithDetails = await Promise.all(
-        (result.rows || []).map(async (hive: StakedHive) => {
+        (result.rows || []).map(async (hive: any) => {
           try {
+            // Map blockchain data structure to frontend interface
+            // Combine worker_ids and queen_id into staked_items array
+            const staked_items: string[] = []
+            if (hive.worker_ids && Array.isArray(hive.worker_ids)) {
+              staked_items.push(...hive.worker_ids.map((id: any) => id.toString()))
+            }
+            if (hive.queen_id && hive.queen_id !== 0) {
+              staked_items.push(hive.queen_id.toString())
+            }
+            
             // Use AtomicAssets API to get properly deserialized data
-              const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${hive.asset_id}`
-               const response = await fetch(apiUrl)
-               if (response.ok) {
-                 const assetData = await response.json()
-                 if (assetData.success && assetData.data) {
-                    const asset = assetData.data
-
-                    return {
-                      ...hive,
-                      asset_details: {
-                        template_id: asset.template?.template_id,
-                        immutable_data: asset.template?.immutable_data || asset.immutable_data || {},
-                        mutable_data: asset.mutable_data || {}
-                      }
-                    }
-                  }
-               }
-            return hive
+            const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${hive.hive_id}`
+            const response = await fetch(apiUrl)
+            
+            let health = 0
+            let availableSlots = 0
+            let max_slots = 0
+            let asset_details = null
+            
+            if (response.ok) {
+              const assetData = await response.json()
+              if (assetData.success && assetData.data) {
+                const asset = assetData.data
+                const mutableData = asset.mutable_data || {}
+                const immutableData = asset.template?.immutable_data || asset.immutable_data || {}
+                
+                // Extract health from mutable data
+                health = mutableData.health || 0
+                
+                // Extract availableSlots from mutable data
+                availableSlots = mutableData.availableSlots || 0
+                
+                // Extract max_slots from immutable template data
+                max_slots = immutableData.max_Slots || 0
+                
+                asset_details = {
+                  template_id: asset.template?.template_id,
+                  immutable_data: immutableData,
+                  mutable_data: mutableData
+                }
+              }
+            }
+            
+            const mappedHive: StakedHive = {
+              hive_id: hive.hive_id.toString(),
+              staked_items: staked_items,
+              health: health,
+              availableSlots: availableSlots,
+              max_slots: max_slots,
+              asset_details: asset_details
+            }
+            
+            return mappedHive
           } catch (err) {
-            console.error(`Failed to fetch asset details for hive ${hive.asset_id}:`, err)
-            return hive
+            console.error(`Failed to fetch asset details for hive ${hive.hive_id}:`, err)
+            // Return basic mapped structure even on error
+            const staked_items: string[] = []
+            if (hive.worker_ids && Array.isArray(hive.worker_ids)) {
+              staked_items.push(...hive.worker_ids.map((id: any) => id.toString()))
+            }
+            if (hive.queen_id && hive.queen_id !== 0) {
+              staked_items.push(hive.queen_id.toString())
+            }
+            return {
+              hive_id: hive.hive_id.toString(),
+              staked_items: staked_items,
+              health: 0, // Default values since we couldn't fetch from NFT data
+              availableSlots: 0,
+              max_slots: 0
+            }
           }
         })
       )
       
+      // Debug: Log the processed hives with staked_items
       setStakedHives(hivesWithDetails)
       
       // Fetch bee assets for each staked hive
@@ -462,12 +556,14 @@ function App() {
           for (const asset of assetData.data) {
             // Only include bees that are not staked
             if (!stakedBeeIds.has(asset.asset_id)) {
-              unstaked.push({
+              const processedAsset = {
                 asset_id: asset.asset_id,
                 template_id: asset.template?.template_id,
                 mutable_data: asset.mutable_data || {},
                 immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
-              })
+              }
+              
+              unstaked.push(processedAsset)
             }
           }
           
@@ -671,44 +767,74 @@ function App() {
     }
   }
   
-  // TODO: Implement unstakeBee when contract action is ready
-  // const unstakeBee = async (hiveId: string, beeId: string) => {
-  //   if (!session) {
-  //     setError('No session available')
-  //     return
-  //   }
-  //   
-  //   try {
-  //     const network = networks[selectedNetwork]
-  //     const action = {
-  //       account: network.contractAccount,
-  //       name: 'unstakebee',
-  //       authorization: [{
-  //         actor: session.actor,
-  //         permission: session.permission
-  //       }],
-  //       data: {
-  //         owner: session.actor,
-  //         hive_id: parseInt(hiveId),
-  //         bee_id: parseInt(beeId)
-  //       }
-  //     }
-  //     
-  //     const result = await session.transact({ actions: [action] })
-  //     console.log('Unstake successful:', result)
-  //     
-  //     // Refresh data after successful unstake
-  //     await fetchResourceBalances()
-  //     await fetchStakedHives()
-  //     
-  //   } catch (err) {
-  //     console.error('Failed to unstake bee:', err)
-  //     setError(`Failed to unstake bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
-  //   }
-  // }
-  
   const unstakeBee = async (hiveId: string, beeId: string) => {
-    setError('Unstaking bees is not yet implemented in the contract')
+    if (!session) {
+      setError('No session available')
+      return
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      const action = {
+        account: network.contractAccount,
+        name: 'unstake',
+        authorization: [{
+          actor: session.actor,
+          permission: session.permission
+        }],
+        data: {
+          owner: session.actor,
+          asset_id: parseInt(beeId),
+          hive_id: parseInt(hiveId)
+        }
+      }
+      
+      const result = await session.transact({ actions: [action] })
+      
+      // Refresh data after successful unstake
+      await fetchResourceBalances()
+      await fetchStakedHives()
+      await fetchUnstakedBees()
+      
+    } catch (err) {
+      console.error('Failed to unstake bee:', err)
+      setError(`Failed to unstake bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
+  const unstakeHive = async (hiveId: string) => {
+    if (!session) {
+      setError('No session available')
+      return
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      const action = {
+        account: network.contractAccount,
+        name: 'unstake',
+        authorization: [{
+          actor: session.actor,
+          permission: session.permission
+        }],
+        data: {
+          owner: session.actor,
+          asset_id: parseInt(hiveId),
+          hive_id: 0  // For hives, hive_id should be 0
+        }
+      }
+      
+      const result = await session.transact({ actions: [action] })
+      
+      // Refresh data after successful unstake
+      await fetchResourceBalances()
+      await fetchStakedHives()
+      await fetchUnstakedBees()
+      
+    } catch (err) {
+      console.error('Failed to unstake hive:', err)
+      setError(`Failed to unstake hive: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
 
   const stakeBee = async (hiveId: string, beeId: string) => {
@@ -829,6 +955,8 @@ function App() {
             stakedHives={stakedHives}
             beeAssets={beeAssets}
             unstakedBees={unstakedBees}
+            beevars={beevars}
+            hivevars={hivevars}
             loadingHives={loadingHives}
             mobileMenuOpen={mobileMenuOpen}
             onNetworkChange={handleNetworkChange}
@@ -837,6 +965,7 @@ function App() {
             onClaimResources={claimResources}
             onFeedBee={feedBee}
             onUnstakeBee={unstakeBee}
+            onUnstakeHive={unstakeHive}
             onStakeBee={stakeBee}
             onUpgradeHive={upgradeHive}
             getEarningRates={getEarningRates}

@@ -31,8 +31,11 @@ interface BeeAsset {
 }
 
 interface StakedHive {
-  asset_id: string
+  hive_id: string
   staked_items: string[]
+  health?: number
+  availableSlots?: number
+  max_slots?: number
   asset_details?: {
     template_id: number
     immutable_data: {
@@ -53,6 +56,8 @@ interface DashboardProps {
   stakedHives: StakedHive[]
   beeAssets: BeeAsset[]
   unstakedBees: BeeAsset[]
+  beevars?: any[]
+  hivevars?: any[]
   loadingHives: boolean
   mobileMenuOpen: boolean
   onNetworkChange: (network: NetworkType) => void
@@ -61,6 +66,7 @@ interface DashboardProps {
   onClaimResources: (hiveId: string) => void
   onFeedBee: (beeId: string) => void
   onUnstakeBee: (hiveId: string, beeId: string) => void
+  onUnstakeHive: (hiveId: string) => void
   onStakeBee: (hiveId: string, beeId: string) => void
   onUpgradeHive: (hiveId: string) => void
   getEarningRates: (beeType: string, beeRarity: string) => Promise<number[]>
@@ -73,6 +79,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   stakedHives,
   beeAssets,
   unstakedBees,
+  beevars,
+  hivevars,
   loadingHives,
   mobileMenuOpen,
   onNetworkChange,
@@ -81,6 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onClaimResources,
   onFeedBee,
   onUnstakeBee,
+  onUnstakeHive,
   onStakeBee,
   onUpgradeHive,
   getEarningRates
@@ -113,15 +122,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                   hive.staked_items.includes(bee.asset_id)
                 )
                 
+
+                
                 return (
                   <HiveCard
                     key={index}
                     hive={hive}
                     hiveBees={hiveBees}
                     unstakedBees={unstakedBees}
+                    beevars={beevars}
+                    hivevars={hivevars}
                     onClaimResources={onClaimResources}
                     onFeedBee={onFeedBee}
                     onUnstakeBee={onUnstakeBee}
+                    onUnstakeHive={onUnstakeHive}
                     onStakeBee={onStakeBee}
                     onUpgradeHive={onUpgradeHive}
                     getEarningRates={getEarningRates}

@@ -91,7 +91,7 @@ const BeeCard: React.FC<BeeCardProps> = ({
         <div className="bee-image-container">
           {bee.immutable_data?.img ? (
             <img 
-              src={bee.immutable_data.img} 
+              src={bee.immutable_data.img.startsWith('http') ? bee.immutable_data.img : `https://ipfs.io/ipfs/${bee.immutable_data.img}`} 
               alt={bee.immutable_data.name || `Bee #${bee.asset_id}`}
               className="bee-image"
               onError={(e) => {
@@ -126,19 +126,19 @@ const BeeCard: React.FC<BeeCardProps> = ({
             </div>
           )}
           <div className="bee-stats">
-            {isStaked && bee.mutable_data.Hunger && (
-              <div className="health-section">
-                <div className="health-info">
-                  <div className="health-left">
-                    <span className="health-label">❤️ Health</span>
+            {isStaked && bee.mutable_data.Hunger !== undefined && (
+              <div className="hunger-section">
+                <div className="hunger-info">
+                  <div className="hunger-left">
+                    <span className="hunger-label">🍽️ Hunger</span>
                   </div>
-                  <span className="hunger-value">Hunger: {bee.mutable_data.Hunger}</span>
+                  <span className="hunger-value">{bee.mutable_data.Hunger}/100</span>
                 </div>
-                <div className="health-bar">
+                <div className="hunger-bar">
                   <div 
-                    className="health-fill"
+                    className="hunger-fill"
                     style={{
-                      width: `${Math.max(0, Math.min(100, 100 - Number(bee.mutable_data.Hunger)))}%`
+                      width: `${Math.max(0, Math.min(100, Number(bee.mutable_data.Hunger)))}%`
                     }}
                   ></div>
                 </div>
