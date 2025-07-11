@@ -4,7 +4,7 @@ import { WebRenderer } from '@wharfkit/web-renderer'
 import { WalletPluginCloudWallet } from '@wharfkit/wallet-plugin-cloudwallet'
 import { WalletPluginAnchor } from '@wharfkit/wallet-plugin-anchor'
 import { WalletPluginWombat } from '@wharfkit/wallet-plugin-wombat'
-import { LoginPage, Dashboard, Marketplace, EarningsPopup } from './components'
+import { LoginPage, Dashboard, Marketplace, EarningsPopup, Wallet } from './components'
 import './App.css'
 
 interface ResourceBalance {
@@ -875,6 +875,95 @@ function App() {
     }
   }
 
+  const handleDeposit = async (tokenSymbol: string, amount: string) => {
+    if (!session) {
+      throw new Error('No session available')
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      const tokenContract = 'farminghoney' // Token contract for all game tokens
+      
+      // Fetch the correct precision from the token contract's stats table
+      const rpc = session.client
+      const statsResult = await rpc.v1.chain.get_table_rows({
+        code: tokenContract,
+        scope: tokenSymbol,
+        table: 'stat',
+        limit: 1
+      })
+      
+      if (!statsResult.rows || statsResult.rows.length === 0) {
+        throw new Error(`Token ${tokenSymbol} not found in contract stats table`)
+      }
+      
+      // Extract precision from the supply field (e.g., "1000.0000 HUNY" -> precision is 4)
+      const supply = statsResult.rows[0].supply
+      const precisionMatch = supply.match(/\.(\d+)/)
+      const precision = precisionMatch ? precisionMatch[1].length : 0
+      
+      const formattedAmount = parseFloat(amount).toFixed(precision)
+      
+      const action = {
+        account: tokenContract,
+        name: 'transfer',
+        authorization: [{
+          actor: session.actor,
+          permission: session.permission
+        }],
+        data: {
+          from: session.actor,
+          to: network.contractAccount,
+          quantity: `${formattedAmount} ${tokenSymbol}`,
+          memo: 'deposit'
+        }
+      }
+      
+      await session.transact({ actions: [action] })
+      
+      // Refresh resource balances after successful deposit
+      await fetchResourceBalances()
+      
+    } catch (err) {
+      console.error('Failed to deposit:', err)
+      throw new Error(`Failed to deposit: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleWithdraw = async (hunyAmount: number, plnAmount: number, bwaxAmount: number, rjAmount: number) => {
+    if (!session) {
+      throw new Error('No session available')
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      const action = {
+        account: network.contractAccount,
+        name: 'withdraw',
+        authorization: [{
+          actor: session.actor,
+          permission: session.permission
+        }],
+        data: {
+          owner: session.actor,
+          huny_amount: hunyAmount,
+          pln_amount: plnAmount,
+          bwax_amount: bwaxAmount,
+          rj_amount: rjAmount
+        }
+      }
+      
+      await session.transact({ actions: [action] })
+      
+      // Refresh resource balances after successful withdrawal
+      await fetchResourceBalances()
+      
+    } catch (err) {
+      console.error('Failed to withdraw:', err)
+      throw new Error(`Failed to withdraw: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
   const handleLogin = async () => {
     if (!sessionKit) return
     
@@ -966,6 +1055,21 @@ function App() {
             onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
             onLogout={handleLogout}
             onNavigate={handleNavigate}
+          />
+        )
+      case 'wallet':
+        return (
+          <Wallet
+            session={session}
+            selectedNetwork={selectedNetwork}
+            resourceBalances={resourceBalances}
+            mobileMenuOpen={mobileMenuOpen}
+            onNetworkChange={handleNetworkChange}
+            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onLogout={handleLogout}
+            onNavigate={handleNavigate}
+            onDeposit={handleDeposit}
+            onWithdraw={handleWithdraw}
           />
         )
       case 'dashboard':

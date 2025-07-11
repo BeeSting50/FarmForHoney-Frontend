@@ -80,8 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   stakedHives,
   beeAssets,
   unstakedBees,
-  beevars,
-  hivevars,
+  // beevars and hivevars are available as props but not currently used
   loadingHives,
   mobileMenuOpen,
   onNetworkChange,

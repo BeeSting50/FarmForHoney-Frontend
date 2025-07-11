@@ -95,7 +95,12 @@ function Header({
           >
             🛒 Marketplace
           </button>
-          <button className="nav-item">📦 Inventory</button>
+          <button 
+            className={`nav-item ${currentPage === 'wallet' ? 'active' : ''}`}
+            onClick={() => onNavigate?.('wallet')}
+          >
+            💰 Wallet
+          </button>
           <button className="nav-item">📊 Statistics</button>
         </div>
         
