@@ -84,9 +84,7 @@
   gap: 1rem;
 }
 
-.health-section {
-  /* margin removed - using flex gap instead */
-}
+
 
 .health-label {
   display: flex;
@@ -122,9 +120,7 @@
   border-radius: 5px;
 }
 
-.slots-section {
-  /* margin removed - using flex gap instead */
-}
+
 
 .slots-label {
   display: flex;

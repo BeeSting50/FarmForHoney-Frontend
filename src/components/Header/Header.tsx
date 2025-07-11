@@ -17,6 +17,8 @@ interface HeaderProps {
   onNetworkChange: (network: NetworkType) => void
   onMobileMenuToggle: () => void
   onLogout: () => void
+  onNavigate?: (page: string) => void
+  currentPage?: string
 }
 
 function Header({
@@ -26,7 +28,9 @@ function Header({
   mobileMenuOpen,
   onNetworkChange,
   onMobileMenuToggle,
-  onLogout
+  onLogout,
+  onNavigate,
+  currentPage = 'dashboard'
 }: HeaderProps) {
   if (!session) {
     // Login page header
@@ -79,8 +83,18 @@ function Header({
         </div>
         
         <div className="navigation-menu">
-          <button className="nav-item active">🏠 Your Hives</button>
-          <button className="nav-item">🛒 Marketplace</button>
+          <button 
+            className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+            onClick={() => onNavigate?.('dashboard')}
+          >
+            🏠 Your Hives
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'marketplace' ? 'active' : ''}`}
+            onClick={() => onNavigate?.('marketplace')}
+          >
+            🛒 Marketplace
+          </button>
           <button className="nav-item">📦 Inventory</button>
           <button className="nav-item">📊 Statistics</button>
         </div>

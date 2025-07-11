@@ -63,12 +63,13 @@ interface DashboardProps {
   onNetworkChange: (network: NetworkType) => void
   onMobileMenuToggle: () => void
   onLogout: () => void
-  onClaimResources: (hiveId: string) => void
-  onFeedBee: (beeId: string) => void
-  onUnstakeBee: (hiveId: string, beeId: string) => void
-  onUnstakeHive: (hiveId: string) => void
-  onStakeBee: (hiveId: string, beeId: string) => void
-  onUpgradeHive: (hiveId: string) => void
+  onNavigate?: (page: string) => void
+  onClaimResources: (hiveId: string) => Promise<void>
+  onFeedBee: (beeId: string) => Promise<void>
+  onUnstakeBee: (hiveId: string, beeId: string) => Promise<void>
+  onUnstakeHive: (hiveId: string) => Promise<void>
+  onStakeBee: (hiveId: string, beeId: string) => Promise<void>
+  onUpgradeHive: (hiveId: string) => Promise<void>
   getEarningRates: (beeType: string, beeRarity: string) => Promise<number[]>
 }
 
@@ -86,6 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNetworkChange,
   onMobileMenuToggle,
   onLogout,
+  onNavigate,
   onClaimResources,
   onFeedBee,
   onUnstakeBee,
@@ -104,6 +106,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}
         onLogout={onLogout}
+        onNavigate={onNavigate}
+        currentPage="dashboard"
       />
 
       <div className="dashboard-content">
@@ -130,8 +134,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                     hive={hive}
                     hiveBees={hiveBees}
                     unstakedBees={unstakedBees}
-                    beevars={beevars}
-                    hivevars={hivevars}
                     onClaimResources={onClaimResources}
                     onFeedBee={onFeedBee}
                     onUnstakeBee={onUnstakeBee}

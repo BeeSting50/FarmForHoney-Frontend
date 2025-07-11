@@ -1,0 +1,77 @@
+.marketplace-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: white;
+}
+
+.marketplace-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.marketplace-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.marketplace-container h2 {
+  margin: 0 0 1rem 0;
+  font-size: 2rem;
+  text-align: center;
+  background: linear-gradient(45deg, #ffd700, #ffed4e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.marketplace-container p {
+  text-align: center;
+  margin-bottom: 2rem;
+  opacity: 0.8;
+  font-size: 1.1rem;
+}
+
+.neftyblocks-marketplace {
+  min-height: 600px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .marketplace-content {
+    padding: 1rem;
+  }
+  
+  .marketplace-container {
+    padding: 1rem;
+  }
+  
+  .marketplace-container h2 {
+    font-size: 1.5rem;
+  }
+  
+  .neftyblocks-marketplace {
+    min-height: 400px;
+  }
+}
+
+/* NeftyBlocks component styling */
+neftyblocks-market {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  neftyblocks-market {
+    min-height: 400px;
+  }
+}

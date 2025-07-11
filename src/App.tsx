@@ -4,7 +4,7 @@ import { WebRenderer } from '@wharfkit/web-renderer'
 import { WalletPluginCloudWallet } from '@wharfkit/wallet-plugin-cloudwallet'
 import { WalletPluginAnchor } from '@wharfkit/wallet-plugin-anchor'
 import { WalletPluginWombat } from '@wharfkit/wallet-plugin-wombat'
-import { LoginPage, Dashboard, EarningsPopup } from './components'
+import { LoginPage, Dashboard, Marketplace, EarningsPopup } from './components'
 import './App.css'
 
 interface ResourceBalance {
@@ -78,6 +78,7 @@ function App() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [showEarningsPopup, setShowEarningsPopup] = useState(false)
   const [earnings, setEarnings] = useState<ResourceBalance[]>([])
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   const networks = {
     mainnet: {
@@ -108,8 +109,8 @@ function App() {
     if (session) {
       fetchResourceBalances()
       fetchStakedHives()
-      fetchBeeVars().then(setBeevars)
-      fetchHiveVars().then(setHivevars)
+      fetchBeeVars().then(data => setBeevars(data || []))
+      fetchHiveVars().then(data => setHivevars(data || []))
     }
   }, [session])
 
@@ -410,7 +411,7 @@ function App() {
             let health = 0
             let availableSlots = 0
             let max_slots = 0
-            let asset_details = null
+            let asset_details = undefined
             
             if (response.ok) {
               const assetData = await response.json()
@@ -461,7 +462,8 @@ function App() {
               staked_items: staked_items,
               health: 0, // Default values since we couldn't fetch from NFT data
               availableSlots: 0,
-              max_slots: 0
+              max_slots: 0,
+              asset_details: undefined
             }
           }
         })
@@ -599,7 +601,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful claim
       await fetchResourceBalances()
@@ -682,7 +684,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful feed
       await fetchResourceBalances()
@@ -715,7 +717,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful upgrade
       await fetchResourceBalances()
@@ -789,7 +791,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful unstake
       await fetchResourceBalances()
@@ -824,7 +826,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful unstake
       await fetchResourceBalances()
@@ -860,7 +862,7 @@ function App() {
         }
       }
       
-      const result = await session.transact({ actions: [action] })
+      await session.transact({ actions: [action] })
       
       // Refresh data after successful stake
       await fetchResourceBalances()
@@ -927,7 +929,12 @@ function App() {
       setBeeAssets([])
       setUnstakedBees([])
       setError(null)
+      setCurrentPage('dashboard')
     }
+  }
+
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page)
   }
 
   if (!session) {
@@ -946,9 +953,25 @@ function App() {
     )
   }
 
-  return (
-    <>
-      <Dashboard
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'marketplace':
+        return (
+          <Marketplace
+            session={session}
+            selectedNetwork={selectedNetwork}
+            resourceBalances={resourceBalances}
+            mobileMenuOpen={mobileMenuOpen}
+            onNetworkChange={handleNetworkChange}
+            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onLogout={handleLogout}
+            onNavigate={handleNavigate}
+          />
+        )
+      case 'dashboard':
+      default:
+        return (
+          <Dashboard
             session={session}
             selectedNetwork={selectedNetwork}
             resourceBalances={resourceBalances}
@@ -962,6 +985,7 @@ function App() {
             onNetworkChange={handleNetworkChange}
             onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
             onLogout={handleLogout}
+            onNavigate={handleNavigate}
             onClaimResources={claimResources}
             onFeedBee={feedBee}
             onUnstakeBee={unstakeBee}
@@ -970,6 +994,13 @@ function App() {
             onUpgradeHive={upgradeHive}
             getEarningRates={getEarningRates}
           />
+        )
+    }
+  }
+
+  return (
+    <>
+      {renderCurrentPage()}
       <EarningsPopup
         isOpen={showEarningsPopup}
         onClose={() => setShowEarningsPopup(false)}

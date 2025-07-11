@@ -42,7 +42,6 @@ interface HiveCardProps {
   hive: StakedHive
   hiveBees: BeeAsset[]
   unstakedBees: BeeAsset[]
-  beevars?: any[]
   hivevars?: any[]
   onClaimResources: (hiveId: string) => void
   onFeedBee: (beeId: string) => void
@@ -57,7 +56,6 @@ const HiveCard: React.FC<HiveCardProps> = ({
   hive,
   hiveBees,
   unstakedBees,
-  beevars,
   hivevars,
   onClaimResources,
   onFeedBee,
