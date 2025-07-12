@@ -1,9 +1,29 @@
-/// <reference path="../../types/neftyblocks.d.ts" />
 import React from 'react'
 import Header from '../Header'
 import { Session } from '@wharfkit/session'
 import '@neftyblocks/market'
 import './Marketplace.css'
+
+// Declare the custom element for TypeScript
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'neftyblocks-market': {
+        collection: string
+        limit?: number | string
+        network?: 'mainnet' | 'testnet'
+        chain?: 'wax'
+        redirect?: string
+        endpoint?: string
+        custom?: string
+        id?: string
+        className?: string
+        style?: any
+        [key: string]: any
+      }
+    }
+  }
+}
 
 type NetworkType = 'mainnet' | 'testnet'
 
@@ -55,10 +75,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({
           
           {/* NeftyBlocks Marketplace Embed */}
           <div className="neftyblocks-marketplace">
-            <neftyblocks-market 
-              collection="farmforhoney"
-              network={selectedNetwork}
-            ></neftyblocks-market>
+            {React.createElement('neftyblocks-market', {
+              collection: 'farmforhoney',
+              network: selectedNetwork
+            })}
           </div>
         </div>
       </main>
