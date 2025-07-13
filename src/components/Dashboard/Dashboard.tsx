@@ -152,90 +152,51 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        <div className="inventory-section">
-          <h2>Inventory</h2>
-          
-          {unstakedHives.length > 0 && (
-            <div className="inventory-category">
-              <h3>Unstaked Hives</h3>
-              <div className="inventory-grid">
-                {unstakedHives.map((hive) => (
-                  <div key={hive.asset_id} className="inventory-item hive-item">
-                    <div className="item-image">
-                      {hive.immutable_data.img ? (
-                        <img 
-                          src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `https://ipfs.io/ipfs/${hive.immutable_data.img}`} 
-                          alt={hive.immutable_data.name || 'Hive'}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div className="placeholder-image">🏠</div>
-                      )}
-                    </div>
-                    <div className="item-info">
-                      <h4>{hive.immutable_data.name || 'Hive'}</h4>
-                      <p className="item-rarity">{hive.immutable_data.rarity || hive.immutable_data.Rarity || 'Common'}</p>
-                      <button 
-                        className="stake-button"
-                        onClick={() => onStakeHive(hive.asset_id)}
-                      >
-                        Stake Hive
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {unstakedBees.length > 0 && (
-            <div className="inventory-category">
-              <h3>Unstaked Bees</h3>
-              {stakedHives.length === 0 ? (
-                <div className="workflow-message">
-                  <p className="warning-text">⚠️ You must stake at least one hive before you can stake bees!</p>
-                  <p className="instruction-text">Stake a hive from your inventory above first.</p>
-                </div>
-              ) : (
+        {stakedHives.length === 0 && (
+          <div className="inventory-section">
+            <h2>Inventory</h2>
+            
+            {unstakedHives.length > 0 ? (
+              <div className="inventory-category">
+                <h3>Unstaked Hives</h3>
                 <div className="inventory-grid">
-                  {unstakedBees.map((bee) => (
-                    <div key={bee.asset_id} className="inventory-item bee-item">
+                  {unstakedHives.map((hive) => (
+                    <div key={hive.asset_id} className="inventory-item hive-item">
                       <div className="item-image">
-                        {bee.immutable_data.img ? (
+                        {hive.immutable_data.img ? (
                           <img 
-                            src={bee.immutable_data.img.startsWith('http') ? bee.immutable_data.img : `https://ipfs.io/ipfs/${bee.immutable_data.img}`} 
-                            alt={bee.immutable_data.name || 'Bee'}
+                            src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `https://ipfs.io/ipfs/${hive.immutable_data.img}`} 
+                            alt={hive.immutable_data.name || 'Hive'}
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
                             }}
                           />
                         ) : (
-                          <div className="placeholder-image">🐝</div>
+                          <div className="placeholder-image">🏠</div>
                         )}
                       </div>
                       <div className="item-info">
-                        <h4>{bee.immutable_data.name || 'Bee'}</h4>
-                        <p className="item-type">{bee.immutable_data.Type || 'Worker'}</p>
-                        <p className="item-rarity">{bee.immutable_data.rarity || bee.immutable_data.Rarity || 'Common'}</p>
-                        <p className="note">Select a hive above to stake this bee</p>
+                        <h4>{hive.immutable_data.name || 'Hive'}</h4>
+                        <p className="item-rarity">{hive.immutable_data.rarity || hive.immutable_data.Rarity || 'Common'}</p>
+                        <button 
+                          className="stake-button"
+                          onClick={() => onStakeHive(hive.asset_id)}
+                        >
+                          Stake Hive
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {unstakedHives.length === 0 && unstakedBees.length === 0 && (
-            <div className="no-inventory">
-              <p>No unstaked items found. Visit the marketplace to get hives and bees!</p>
-            </div>
-          )}
-        </div>
+              </div>
+            ) : (
+              <div className="no-inventory">
+                <p>No unstaked items found. Visit the marketplace to get hives and bees!</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
