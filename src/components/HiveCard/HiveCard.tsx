@@ -205,25 +205,25 @@ const HiveCard: React.FC<HiveCardProps> = ({
             ))}
           </div>
         ) : (
+          <div className="no-bees">No bees staked in this hive</div>
+        )}
+        
+        {/* Show unstaked bees if there are available slots and unstaked bees */}
+        {(hive.availableSlots || 0) > 0 && unstakedBees.length > 0 && (
           <div className="unstaked-bees-section">
-            <div className="no-bees">No bees staked in this hive</div>
-            {unstakedBees.length > 0 && (
-              <div className="unstaked-bees">
-                <h5>🐝 Available Bees to Stake ({unstakedBees.length})</h5>
-                <div className="bees-grid">
-                  {unstakedBees.map((bee, beeIndex) => (
-                    <BeeCard
-                      key={beeIndex}
-                      bee={bee}
-                      isStaked={false}
-                      hiveId={hive.hive_id}
-                      onStake={onStakeBee}
-                      getEarningRates={getEarningRates}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            <h5>🐝 Available Bees to Stake ({unstakedBees.length})</h5>
+            <div className="bees-grid">
+              {unstakedBees.map((bee, beeIndex) => (
+                <BeeCard
+                  key={beeIndex}
+                  bee={bee}
+                  isStaked={false}
+                  hiveId={hive.hive_id}
+                  onStake={onStakeBee}
+                  getEarningRates={getEarningRates}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

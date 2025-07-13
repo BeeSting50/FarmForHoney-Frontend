@@ -72,6 +72,7 @@ function App() {
   const [hivevars, setHivevars] = useState<any[]>([])
   const [beeAssets, setBeeAssets] = useState<BeeAsset[]>([])  
   const [unstakedBees, setUnstakedBees] = useState<BeeAsset[]>([])
+  const [unstakedHives, setUnstakedHives] = useState<BeeAsset[]>([])
   const [loadingHives, setLoadingHives] = useState(false)
   const [, setLoadingBees] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -404,8 +405,13 @@ function App() {
               staked_items.push(hive.queen_id.toString())
             }
             
+            // Get the correct API base URL for the selected network
+            const apiBaseUrl = selectedNetwork === 'mainnet' 
+              ? 'https://aa.neftyblocks.com/atomicassets/v1' 
+              : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
+            
             // Use AtomicAssets API to get properly deserialized data
-            const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${hive.hive_id}`
+            const apiUrl = `${apiBaseUrl}/assets/${hive.hive_id}`
             const response = await fetch(apiUrl)
             
             let health = 0
@@ -477,8 +483,9 @@ function App() {
         await fetchBeeAssets(hivesWithDetails)
       }
       
-      // Fetch unstaked bees from user's wallet
-      await fetchUnstakedBees()
+      // Fetch unstaked bees and hives from user's wallet
+      await fetchUnstakedBees(hivesWithDetails)
+      await fetchUnstakedHives(hivesWithDetails)
     } catch (err) {
       console.error('Failed to fetch staked hives:', err)
       setError(`Failed to load staked hives: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -501,12 +508,17 @@ function App() {
         allBeeIds.push(...hive.staked_items)
       })
       
+      // Get the correct API base URL for the selected network
+      const apiBaseUrl = selectedNetwork === 'mainnet' 
+        ? 'https://aa.neftyblocks.com/atomicassets/v1' 
+        : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
+      
       // Fetch asset details from AtomicAssets API
       const beeAssets: BeeAsset[] = []
       for (const beeId of allBeeIds) {
         try {
           // Use AtomicAssets API to get properly deserialized data
-            const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets/${beeId}`
+            const apiUrl = `${apiBaseUrl}/assets/${beeId}`
              const response = await fetch(apiUrl)
              if (response.ok) {
                const assetData = await response.json()
@@ -536,18 +548,24 @@ function App() {
     }
   }
 
-  const fetchUnstakedBees = async () => {
+  const fetchUnstakedBees = async (currentStakedHives?: StakedHive[]) => {
     if (!session) return
     
     try {
       // Get all staked bee IDs to filter them out
+      const hivesToCheck = currentStakedHives || stakedHives
       const stakedBeeIds = new Set<string>()
-      stakedHives.forEach(hive => {
+      hivesToCheck.forEach(hive => {
         hive.staked_items.forEach(beeId => stakedBeeIds.add(beeId))
       })
       
-      // Fetch user's assets from AtomicAssets API
-      const apiUrl = `https://aa-testnet.neftyblocks.com/atomicassets/v1/assets?owner=${session.actor}&collection_name=farmforhoney&schema_name=bees&page=1&limit=100`
+      // Get the correct API base URL for the selected network
+      const apiBaseUrl = selectedNetwork === 'mainnet' 
+        ? 'https://aa.neftyblocks.com/atomicassets/v1' 
+        : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
+      
+      // Fetch user's bee assets from AtomicAssets API
+      const apiUrl = `${apiBaseUrl}/assets?owner=${session.actor}&collection_name=farmforhoney&page=1&limit=100`
       const response = await fetch(apiUrl)
       
       if (response.ok) {
@@ -556,8 +574,30 @@ function App() {
           const unstaked: BeeAsset[] = []
           
           for (const asset of assetData.data) {
-            // Only include bees that are not staked
-            if (!stakedBeeIds.has(asset.asset_id)) {
+            // Filter for bees based on schema name and attributes
+            // Bees have schemas like 'bee', 'babybees' and eggs attribute, hives have 'hive' schema and health
+            const hasHealthAttribute = asset.template?.immutable_data?.health !== undefined ||
+                                     asset.immutable_data?.health !== undefined ||
+                                     asset.mutable_data?.health !== undefined
+            
+            const hasEggsAttribute = asset.template?.immutable_data?.maxEggs !== undefined ||
+                                   asset.template?.immutable_data?.availableEggs !== undefined ||
+                                   asset.template?.immutable_data?.Eggs !== undefined ||
+                                   asset.immutable_data?.maxEggs !== undefined ||
+                                   asset.immutable_data?.availableEggs !== undefined ||
+                                   asset.immutable_data?.Eggs !== undefined ||
+                                   asset.mutable_data?.maxEggs !== undefined ||
+                                   asset.mutable_data?.availableEggs !== undefined ||
+                                   asset.mutable_data?.Eggs !== undefined
+            
+            const isBee = (asset.schema?.schema_name === 'bee' || 
+                           asset.schema?.schema_name === 'babybees' ||
+                           asset.template?.schema?.schema_name === 'bee' ||
+                           asset.template?.schema?.schema_name === 'babybees') &&
+                           hasEggsAttribute && !hasHealthAttribute
+             
+             // Only include bees that are not staked
+             if (isBee && !stakedBeeIds.has(asset.asset_id)) {
               const processedAsset = {
                 asset_id: asset.asset_id,
                 template_id: asset.template?.template_id,
@@ -574,6 +614,95 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to fetch unstaked bees:', err)
+    }
+  }
+
+  // Test function to debug API calls
+  const testUnstakedHivesAPI = async () => {
+    if (!session) {
+      console.log('No session available for testing')
+      return
+    }
+    
+    const apiBaseUrl = selectedNetwork === 'mainnet' 
+      ? 'https://aa.neftyblocks.com/atomicassets/v1' 
+      : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
+    
+    const testUrl = `${apiBaseUrl}/assets?owner=${session.actor}&collection_name=farmforhoney&page=1&limit=10`
+    console.log('Testing API call:', testUrl)
+    
+    try {
+      const response = await fetch(testUrl)
+      const data = await response.json()
+      console.log('Test API response:', data)
+    } catch (err) {
+      console.error('Test API error:', err)
+    }
+  }
+  
+  // Make test function available globally for debugging
+  if (typeof window !== 'undefined') {
+    (window as any).testUnstakedHivesAPI = testUnstakedHivesAPI
+  }
+
+  const fetchUnstakedHives = async (currentStakedHives?: StakedHive[]) => {
+    if (!session) return
+    
+    try {
+      // Get all staked hive IDs to filter them out
+      const hivesToCheck = currentStakedHives || stakedHives
+      const stakedHiveIds = new Set<string>()
+      hivesToCheck.forEach(hive => {
+        stakedHiveIds.add(hive.hive_id)
+      })
+      
+      // Get the correct API base URL for the selected network
+      const apiBaseUrl = selectedNetwork === 'mainnet' 
+        ? 'https://aa.neftyblocks.com/atomicassets/v1' 
+        : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
+      
+      // Fetch user's hive assets from AtomicAssets API
+      const apiUrl = `${apiBaseUrl}/assets?owner=${session.actor}&collection_name=farmforhoney&page=1&limit=100`
+      const response = await fetch(apiUrl)
+      
+      if (response.ok) {
+        const assetData = await response.json()
+        if (assetData.success && assetData.data) {
+          const unstaked: BeeAsset[] = []
+          
+          for (const asset of assetData.data) {
+            // Filter for hives based on schema name and attributes
+            // Hives have schema 'hive' and health attribute, bees have schema 'bee' and eggs
+            const hasHealthAttribute = asset.template?.immutable_data?.health !== undefined ||
+                                     asset.immutable_data?.health !== undefined ||
+                                     asset.mutable_data?.health !== undefined
+            
+            const hasEggsAttribute = asset.template?.immutable_data?.eggs !== undefined ||
+                                   asset.immutable_data?.eggs !== undefined ||
+                                   asset.mutable_data?.eggs !== undefined
+            
+            const isHive = (asset.schema?.schema_name === 'hive' || 
+                          asset.template?.schema?.schema_name === 'hive') &&
+                          hasHealthAttribute && !hasEggsAttribute
+            
+            // Only include hives that are not staked
+            if (isHive && !stakedHiveIds.has(asset.asset_id)) {
+              const processedAsset = {
+                asset_id: asset.asset_id,
+                template_id: asset.template?.template_id,
+                mutable_data: asset.mutable_data || {},
+                immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
+              }
+              
+              unstaked.push(processedAsset)
+            }
+          }
+          
+          setUnstakedHives(unstaked)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch unstaked hives:', err)
     }
   }
 
@@ -797,6 +926,7 @@ function App() {
       await fetchResourceBalances()
       await fetchStakedHives()
       await fetchUnstakedBees()
+      await fetchUnstakedHives()
       
     } catch (err) {
       console.error('Failed to unstake bee:', err)
@@ -865,13 +995,50 @@ function App() {
       await session.transact({ actions: [action] })
       
       // Refresh data after successful stake
-      await fetchResourceBalances()
-      await fetchStakedHives()
-      await fetchUnstakedBees()
+       await fetchResourceBalances()
+       await fetchStakedHives()
+       await fetchUnstakedBees()
+       await fetchUnstakedHives()
       
     } catch (err) {
       console.error('Failed to stake bee:', err)
       setError(`Failed to stake bee: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
+  const stakeHive = async (hiveId: string) => {
+    if (!session) {
+      setError('No session available')
+      return
+    }
+    
+    try {
+      const network = networks[selectedNetwork]
+      const action = {
+        account: 'atomicassets',
+        name: 'transfer',
+        authorization: [{
+          actor: session.actor,
+          permission: session.permission
+        }],
+        data: {
+          from: session.actor,
+          to: network.contractAccount,
+          asset_ids: [hiveId],
+          memo: 'stakehive'
+        }
+      }
+      
+      await session.transact({ actions: [action] })
+      
+      // Refresh data after successful stake
+      await fetchResourceBalances()
+      await fetchStakedHives()
+      await fetchUnstakedHives()
+      
+    } catch (err) {
+      console.error('Failed to stake hive:', err)
+      setError(`Failed to stake hive: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
@@ -1082,6 +1249,7 @@ function App() {
             stakedHives={stakedHives}
             beeAssets={beeAssets}
             unstakedBees={unstakedBees}
+            unstakedHives={unstakedHives}
             beevars={beevars}
             hivevars={hivevars}
             loadingHives={loadingHives}
@@ -1095,6 +1263,7 @@ function App() {
             onUnstakeBee={unstakeBee}
             onUnstakeHive={unstakeHive}
             onStakeBee={stakeBee}
+            onStakeHive={stakeHive}
             onUpgradeHive={upgradeHive}
             getEarningRates={getEarningRates}
           />
