@@ -175,33 +175,6 @@
   opacity: 0.8;
 }
 
-.no-inventory {
-  text-align: center;
-  padding: 2rem;
-  color: #bdc3c7;
-  font-size: 1.1rem;
-}
-
-/* Workflow Message Styles */
-.workflow-message {
-  background: rgba(231, 76, 60, 0.1);
-  border: 2px solid #e74c3c;
-  border-radius: 12px;
-  padding: 2rem;
-  text-align: center;
-  margin: 1rem 0;
-}
-
-.warning-text {
-  color: #e74c3c;
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-}
-
-.instruction-text {
-  color: #f39c12;
-  font-size: 1rem;
   margin: 0;
   font-style: italic;
 }

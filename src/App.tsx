@@ -110,6 +110,7 @@ function App() {
     if (session) {
       fetchResourceBalances()
       fetchStakedHives()
+      fetchUnstakedHives()
       fetchBeeVars().then(data => setBeevars(data || []))
       fetchHiveVars().then(data => setHivevars(data || []))
     }
@@ -672,18 +673,32 @@ function App() {
           
           for (const asset of assetData.data) {
             // Filter for hives based on schema name and attributes
-            // Hives have schema 'hive' and health attribute, bees have schema 'bee' and eggs
-            const hasHealthAttribute = asset.template?.immutable_data?.health !== undefined ||
-                                     asset.immutable_data?.health !== undefined ||
-                                     asset.mutable_data?.health !== undefined
+            // Hives have schema 'hive' or 'hives', or have maxSlots/max_slots attributes
+            // Bees have schema 'bee'/'babybees' and eggs/maxEggs attributes
             
-            const hasEggsAttribute = asset.template?.immutable_data?.eggs !== undefined ||
-                                   asset.immutable_data?.eggs !== undefined ||
-                                   asset.mutable_data?.eggs !== undefined
+            const hasEggsAttribute = asset.template?.immutable_data?.maxEggs !== undefined ||
+                                   asset.template?.immutable_data?.availableEggs !== undefined ||
+                                   asset.template?.immutable_data?.Eggs !== undefined ||
+                                   asset.immutable_data?.maxEggs !== undefined ||
+                                   asset.immutable_data?.availableEggs !== undefined ||
+                                   asset.immutable_data?.Eggs !== undefined ||
+                                   asset.mutable_data?.maxEggs !== undefined ||
+                                   asset.mutable_data?.availableEggs !== undefined ||
+                                   asset.mutable_data?.Eggs !== undefined
             
+            const hasMaxSlotsAttribute = asset.template?.immutable_data?.maxSlots !== undefined ||
+                                       asset.template?.immutable_data?.max_slots !== undefined ||
+                                       asset.immutable_data?.maxSlots !== undefined ||
+                                       asset.immutable_data?.max_slots !== undefined ||
+                                       asset.mutable_data?.maxSlots !== undefined ||
+                                       asset.mutable_data?.max_slots !== undefined
+            
+            // Identify hives by schema name or by having maxSlots but not eggs
             const isHive = (asset.schema?.schema_name === 'hive' || 
-                          asset.template?.schema?.schema_name === 'hive') &&
-                          hasHealthAttribute && !hasEggsAttribute
+                          asset.schema?.schema_name === 'hives' ||
+                          asset.template?.schema?.schema_name === 'hive' ||
+                          asset.template?.schema?.schema_name === 'hives') ||
+                          (hasMaxSlotsAttribute && !hasEggsAttribute)
             
             // Only include hives that are not staked
             if (isHive && !stakedHiveIds.has(asset.asset_id)) {
@@ -713,7 +728,6 @@ function App() {
     }
     
     try {
-      // Capture resource balances before claiming
       const balancesBefore = [...resourceBalances]
       
       const network = networks[selectedNetwork]
@@ -732,34 +746,17 @@ function App() {
       
       await session.transact({ actions: [action] })
       
-      // Refresh data after successful claim
+      // Refresh resource balances after successful claim
       await fetchResourceBalances()
-      await fetchStakedHives()
       
-      // Calculate earnings by fetching fresh balances and comparing
+      // Calculate earnings to show popup
       const calculateEarnings = async () => {
         try {
-          // Fetch fresh balances after claim
-          const network = networks[selectedNetwork]
-          const result = await session.client.v1.chain.get_table_rows({
-            code: network.contractAccount,
-            scope: session.actor.toString(),
-            table: 'resources',
-            limit: 100
-          })
-          
-          const balancesAfter = result.rows || []
+          const balancesAfter = [...resourceBalances]
+          const beforeMap = new Map(balancesBefore.map(b => [b.key_id, typeof b.amount === 'string' ? parseFloat(b.amount) : b.amount]))
           const earningsData: ResourceBalance[] = []
           
-          // Create a map of before balances for easy lookup
-          const beforeMap = new Map<string, number>()
-          balancesBefore.forEach(balance => {
-            const amount = typeof balance.amount === 'string' ? parseFloat(balance.amount) : balance.amount
-            beforeMap.set(balance.key_id, amount)
-          })
-          
-          // Calculate differences
-          balancesAfter.forEach((afterBalance: any) => {
+          balancesAfter.forEach(afterBalance => {
             const afterAmount = typeof afterBalance.amount === 'string' ? parseFloat(afterBalance.amount) : afterBalance.amount
             const beforeAmount = beforeMap.get(afterBalance.key_id) || 0
             const earned = afterAmount - beforeAmount
@@ -783,7 +780,6 @@ function App() {
       // Calculate and show earnings
       const calculatedEarnings = await calculateEarnings()
       setEarnings(calculatedEarnings)
-      setShowEarningsPopup(true)
       
     } catch (err) {
       console.error('Failed to claim resources:', err)

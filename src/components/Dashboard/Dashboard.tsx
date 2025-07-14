@@ -152,51 +152,49 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {stakedHives.length === 0 && (
-          <div className="inventory-section">
-            <h2>Inventory</h2>
-            
-            {unstakedHives.length > 0 ? (
-              <div className="inventory-category">
-                <h3>Unstaked Hives</h3>
-                <div className="inventory-grid">
-                  {unstakedHives.map((hive) => (
-                    <div key={hive.asset_id} className="inventory-item hive-item">
-                      <div className="item-image">
-                        {hive.immutable_data.img ? (
-                          <img 
-                            src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `https://ipfs.io/ipfs/${hive.immutable_data.img}`} 
-                            alt={hive.immutable_data.name || 'Hive'}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <div className="placeholder-image">🏠</div>
-                        )}
-                      </div>
-                      <div className="item-info">
-                        <h4>{hive.immutable_data.name || 'Hive'}</h4>
-                        <p className="item-rarity">{hive.immutable_data.rarity || hive.immutable_data.Rarity || 'Common'}</p>
-                        <button 
-                          className="stake-button"
-                          onClick={() => onStakeHive(hive.asset_id)}
-                        >
-                          Stake Hive
-                        </button>
-                      </div>
+        <div className="inventory-section">
+          <h2>Inventory</h2>
+          
+          {unstakedHives.length > 0 ? (
+            <div className="inventory-category">
+              <h3>Unstaked Hives</h3>
+              <div className="inventory-grid">
+                {unstakedHives.map((hive) => (
+                  <div key={hive.asset_id} className="inventory-item hive-item">
+                    <div className="item-image">
+                      {hive.immutable_data.img ? (
+                        <img 
+                          src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `https://ipfs.io/ipfs/${hive.immutable_data.img}`} 
+                          alt={hive.immutable_data.name || 'Hive'}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div className="placeholder-image">🏠</div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                    <div className="item-info">
+                      <h4>{hive.immutable_data.name || 'Hive'}</h4>
+                      <p className="item-rarity">{hive.immutable_data.rarity || hive.immutable_data.Rarity || 'Common'}</p>
+                      <button 
+                        className="stake-button"
+                        onClick={() => onStakeHive(hive.asset_id)}
+                      >
+                        Stake Hive
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="no-inventory">
-                <p>No unstaked items found. Visit the marketplace to get hives and bees!</p>
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="no-inventory">
+              <p>No unstaked items found. Visit the marketplace to get hives and bees!</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
