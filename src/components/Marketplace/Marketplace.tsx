@@ -1,7 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Header from '../Header'
 import { Session } from '@wharfkit/session'
-import '@neftyblocks/market'
 import './Marketplace.css'
 
 // Declare the custom element for TypeScript
@@ -54,6 +53,19 @@ const Marketplace: React.FC<MarketplaceProps> = ({
   onLogout,
   onNavigate
 }) => {
+  // Dynamically import the NeftyBlocks market library only when needed
+  useEffect(() => {
+    const loadNeftyBlocks = async () => {
+      try {
+        await import('@neftyblocks/market')
+      } catch (error) {
+        console.error('Failed to load NeftyBlocks market:', error)
+      }
+    }
+    
+    loadNeftyBlocks()
+  }, [])
+
   return (
     <div className="App marketplace-page">
       <Header

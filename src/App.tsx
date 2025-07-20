@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Session, SessionKit } from '@wharfkit/session'
 import { WebRenderer } from '@wharfkit/web-renderer'
-import { WalletPluginCloudWallet } from '@wharfkit/wallet-plugin-cloudwallet'
-import { WalletPluginAnchor } from '@wharfkit/wallet-plugin-anchor'
-import { WalletPluginWombat } from '@wharfkit/wallet-plugin-wombat'
-import { LoginPage, Dashboard, Marketplace, EarningsPopup, Wallet } from './components'
 import './App.css'
+
+// Lazy load components for code splitting
+const LoginPage = lazy(() => import('./components/LoginPage'))
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const Marketplace = lazy(() => import('./components/Marketplace'))
+const Wallet = lazy(() => import('./components/Wallet'))
+const EarningsPopup = lazy(() => import('./components/EarningsPopup'))
 
 interface ResourceBalance {
   key_id: string
@@ -50,11 +53,6 @@ interface BeeAsset {
 }
 
 type NetworkType = 'mainnet' | 'testnet'
-
-interface NetworkEndpoint {
-  url: string
-  name: string
-}
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -325,6 +323,17 @@ function App() {
             ...network.chain,
             url: endpointUrl
           }
+          
+          // Dynamically import wallet plugins to reduce initial bundle size
+          const [
+            { WalletPluginCloudWallet },
+            { WalletPluginAnchor },
+            { WalletPluginWombat }
+          ] = await Promise.all([
+            import('@wharfkit/wallet-plugin-cloudwallet'),
+            import('@wharfkit/wallet-plugin-anchor'),
+            import('@wharfkit/wallet-plugin-wombat')
+          ])
           
           return new SessionKit({
             appName: 'HoneyFarmers',
@@ -1265,17 +1274,19 @@ if (response.ok) {
 
   if (!session) {
     return (
-      <LoginPage
-        session={session}
-        selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
-        mobileMenuOpen={mobileMenuOpen}
-        error={error}
-        onNetworkChange={handleNetworkChange}
-        onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-        onLogout={handleLogout}
-        onLogin={handleLogin}
-      />
+      <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
+        <LoginPage
+          session={session}
+          selectedNetwork={selectedNetwork}
+          resourceBalances={resourceBalances}
+          mobileMenuOpen={mobileMenuOpen}
+          error={error}
+          onNetworkChange={handleNetworkChange}
+          onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onLogout={handleLogout}
+          onLogin={handleLogin}
+        />
+      </Suspense>
     )
   }
 
@@ -1283,60 +1294,66 @@ if (response.ok) {
     switch (currentPage) {
       case 'marketplace':
         return (
-          <Marketplace
-            session={session}
-            selectedNetwork={selectedNetwork}
-            resourceBalances={resourceBalances}
-            mobileMenuOpen={mobileMenuOpen}
-            onNetworkChange={handleNetworkChange}
-            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-          />
+          <Suspense fallback={<div className="loading-spinner">Loading Marketplace...</div>}>
+            <Marketplace
+              session={session}
+              selectedNetwork={selectedNetwork}
+              resourceBalances={resourceBalances}
+              mobileMenuOpen={mobileMenuOpen}
+              onNetworkChange={handleNetworkChange}
+              onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onLogout={handleLogout}
+              onNavigate={handleNavigate}
+            />
+          </Suspense>
         )
       case 'wallet':
         return (
-          <Wallet
-            session={session}
-            selectedNetwork={selectedNetwork}
-            resourceBalances={resourceBalances}
-            mobileMenuOpen={mobileMenuOpen}
-            onNetworkChange={handleNetworkChange}
-            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-            onDeposit={handleDeposit}
-            onWithdraw={handleWithdraw}
-          />
+          <Suspense fallback={<div className="loading-spinner">Loading Wallet...</div>}>
+            <Wallet
+              session={session}
+              selectedNetwork={selectedNetwork}
+              resourceBalances={resourceBalances}
+              mobileMenuOpen={mobileMenuOpen}
+              onNetworkChange={handleNetworkChange}
+              onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onLogout={handleLogout}
+              onNavigate={handleNavigate}
+              onDeposit={handleDeposit}
+              onWithdraw={handleWithdraw}
+            />
+          </Suspense>
         )
       case 'dashboard':
       default:
         return (
-          <Dashboard
-            session={session}
-            selectedNetwork={selectedNetwork}
-            resourceBalances={resourceBalances}
-            stakedHives={stakedHives}
-            beeAssets={beeAssets}
-            unstakedBees={unstakedBees}
-            unstakedHives={unstakedHives}
-            beevars={beevars}
-            hivevars={hivevars}
-            loadingHives={loadingHives}
-            mobileMenuOpen={mobileMenuOpen}
-            onNetworkChange={handleNetworkChange}
-            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-            onClaimResources={claimResources}
-            onFeedBee={feedBee}
-            onUnstakeBee={unstakeBee}
-            onUnstakeHive={unstakeHive}
-            onStakeBee={stakeBee}
-            onStakeHive={stakeHive}
-            onUpgradeHive={upgradeHive}
-            getEarningRates={getEarningRates}
-          />
+          <Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}>
+            <Dashboard
+              session={session}
+              selectedNetwork={selectedNetwork}
+              resourceBalances={resourceBalances}
+              stakedHives={stakedHives}
+              beeAssets={beeAssets}
+              unstakedBees={unstakedBees}
+              unstakedHives={unstakedHives}
+              beevars={beevars}
+              hivevars={hivevars}
+              loadingHives={loadingHives}
+              mobileMenuOpen={mobileMenuOpen}
+              onNetworkChange={handleNetworkChange}
+              onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onLogout={handleLogout}
+              onNavigate={handleNavigate}
+              onClaimResources={claimResources}
+              onFeedBee={feedBee}
+              onUnstakeBee={unstakeBee}
+              onUnstakeHive={unstakeHive}
+              onStakeBee={stakeBee}
+              onStakeHive={stakeHive}
+              onUpgradeHive={upgradeHive}
+              getEarningRates={getEarningRates}
+            />
+          </Suspense>
         )
     }
   }
@@ -1344,11 +1361,13 @@ if (response.ok) {
   return (
     <>
       {renderCurrentPage()}
-      <EarningsPopup
-        isOpen={showEarningsPopup}
-        onClose={() => setShowEarningsPopup(false)}
-        earnings={earnings}
-      />
+      <Suspense fallback={null}>
+        <EarningsPopup
+          isOpen={showEarningsPopup}
+          onClose={() => setShowEarningsPopup(false)}
+          earnings={earnings}
+        />
+      </Suspense>
     </>
   )
 }

@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import Header from '../Header'
-import HiveCard from '../HiveCard'
-import ResourceBalances from '../ResourceBalances'
 import { Session } from '@wharfkit/session'
 import './Dashboard.css'
+
+// Lazy load heavy components
+const HiveCard = lazy(() => import('../HiveCard'))
+const ResourceBalances = lazy(() => import('../ResourceBalances'))
 
 type NetworkType = 'mainnet' | 'testnet'
 
@@ -83,7 +85,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   beeAssets,
   unstakedBees,
   unstakedHives,
-  beevars,
   hivevars,
   loadingHives,
   mobileMenuOpen,
@@ -115,10 +116,12 @@ const Dashboard: React.FC<DashboardProps> = ({
       />
 
       <div className="dashboard-content">
-        <ResourceBalances 
-          resourceBalances={resourceBalances}
-          className="dashboard-resources"
-        />
+        <Suspense fallback={<div className="loading">Loading resources...</div>}>
+          <ResourceBalances
+            resourceBalances={resourceBalances}
+            className="dashboard-resources"
+          />
+        </Suspense>
         
         {(loadingHives || stakedHives.length > 0) && (
           <div className="hives-section">
@@ -128,25 +131,26 @@ const Dashboard: React.FC<DashboardProps> = ({
             ) : (
               <div className="hives-grid">
                 {stakedHives.map((hive, index) => {
-                  const hiveBees = beeAssets.filter(bee => 
+                  const hiveBees = beeAssets.filter(bee =>
                     hive.staked_items.includes(bee.asset_id)
                   )
                   
                   return (
-                    <HiveCard
-                      key={index}
-                      hive={hive}
-                      hiveBees={hiveBees}
-                      unstakedBees={unstakedBees}
-                      hivevars={hivevars}
-                      onClaimResources={onClaimResources}
-                      onFeedBee={onFeedBee}
-                      onUnstakeBee={onUnstakeBee}
-                      onUnstakeHive={onUnstakeHive}
-                      onStakeBee={onStakeBee}
-                      onUpgradeHive={onUpgradeHive}
-                      getEarningRates={getEarningRates}
-                    />
+                    <Suspense key={index} fallback={<div className="loading">Loading hive...</div>}>
+                      <HiveCard
+                        hive={hive}
+                        hiveBees={hiveBees}
+                        unstakedBees={unstakedBees}
+                        hivevars={hivevars}
+                        onClaimResources={onClaimResources}
+                        onFeedBee={onFeedBee}
+                        onUnstakeBee={onUnstakeBee}
+                        onUnstakeHive={onUnstakeHive}
+                        onStakeBee={onStakeBee}
+                        onUpgradeHive={onUpgradeHive}
+                        getEarningRates={getEarningRates}
+                      />
+                    </Suspense>
                   )
                 })}
               </div>
