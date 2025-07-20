@@ -51,6 +51,11 @@ interface BeeAsset {
 
 type NetworkType = 'mainnet' | 'testnet'
 
+interface NetworkEndpoint {
+  url: string
+  name: string
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionKit, setSessionKit] = useState<SessionKit | null>(null)
@@ -88,6 +93,9 @@ function App() {
         url: 'https://wax.greymass.com',
         name: 'WAX'
       },
+      endpoints: [
+        { url: 'https://wax.greymass.com', name: 'Greymass' }
+      ],
       contractAccount: 'farmforhoney' // Replace with actual contract account
     },
     testnet: {
@@ -96,8 +104,61 @@ function App() {
         url: 'https://testnet.waxsweden.org',
         name: 'WAX Testnet'
       },
+      endpoints: [
+        { url: 'https://testnet.waxsweden.org', name: 'WAX Sweden' },
+        { url: 'https://testnet-wax.3dkrender.com', name: '3DK Render' },
+        { url: 'https://api.waxtest.waxgalaxy.io', name: 'WAX Galaxy' },
+        { url: 'https://api.waxtest.alohaeos.com', name: 'Aloha EOS' },
+        { url: 'https://waxtest.eu.eosamsterdam.net', name: 'EOS Amsterdam' }
+      ],
       contractAccount: 'farmforhoney' // Replace with actual testnet contract account
     }
+  }
+
+  // Retry mechanism for API calls with fallback endpoints
+  const makeAPICallWithFallback = async <T,>(
+    apiCall: (endpoint: string) => Promise<T>,
+    operation: string,
+    timeout: number = 5000
+  ): Promise<T> => {
+    const network = networks[selectedNetwork]
+    const endpoints = network.endpoints
+    
+    let lastError: Error | null = null
+    
+    for (let i = 0; i < endpoints.length; i++) {
+      const endpoint = endpoints[i]
+      const endpointUrl = endpoint.url
+      
+      try {
+        // Create a timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout)
+        })
+        
+        // Race between the API call and timeout
+        const result = await Promise.race([
+          apiCall(endpointUrl),
+          timeoutPromise
+        ])
+        
+        return result
+        
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        lastError = error instanceof Error ? error : new Error(errorMsg)
+        
+        // If this isn't the last endpoint, continue to next
+        if (i < endpoints.length - 1) {
+          continue
+        }
+      }
+    }
+    
+    // All endpoints failed
+    const errorMsg = `All endpoints failed for ${operation}. Last error: ${lastError?.message || 'Unknown error'}`
+    console.error(errorMsg)
+    throw new Error(errorMsg)
   }
 
   useEffect(() => {
@@ -155,7 +216,6 @@ function App() {
       }
       
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionInfo))
-      console.log('Session data saved for network:', network, sessionData)
     }
   }
 
@@ -165,7 +225,6 @@ function App() {
     try {
       const stored = localStorage.getItem(SESSION_STORAGE_KEY)
       if (!stored) {
-        console.log('No stored session data found')
         return null
       }
       
@@ -175,7 +234,6 @@ function App() {
       
       // Check if session is expired
       if (now > expiryDate) {
-        console.log('Stored session data expired')
         localStorage.removeItem(SESSION_STORAGE_KEY)
         return null
       }
@@ -183,15 +241,12 @@ function App() {
       // Check if network matches - if not, switch to the stored network (only if allowed)
       if (sessionInfo.network !== currentNetwork) {
         if (allowNetworkSwitch) {
-          console.log('Stored session network mismatch:', sessionInfo.network, 'vs', currentNetwork)
-          console.log('Switching to stored session network:', sessionInfo.network)
           // Update the selected network to match the stored session
           setSelectedNetwork(sessionInfo.network as NetworkType)
         }
         return sessionInfo.data
       }
       
-      console.log('Found valid stored session data for network:', currentNetwork, sessionInfo.data)
       return sessionInfo.data
     } catch (err) {
       console.warn('Failed to parse stored session data:', err)
@@ -257,64 +312,80 @@ function App() {
     
     // If stored session is for a different network, clear conflicting storage first
     if (storedSession && storedSession.chainId !== network.chain.id) {
-      console.log('Stored session chain ID mismatch, clearing conflicting storage')
       clearNetworkSpecificStorage(true)
       setIsInitializing(false)
       return // Exit early to let the network switch trigger a new initialization
     }
     
-    const kit = new SessionKit({
-      appName: 'HoneyFarmers',
-      chains: [network.chain],
-      ui: new WebRenderer(),
-      walletPlugins: [
-        new WalletPluginCloudWallet(),
-        new WalletPluginAnchor(),
-        new WalletPluginWombat(),
-      ],
-    })
-    setSessionKit(kit)
+    // Use fallback system for SessionKit initialization
+    try {
+      const kit = await makeAPICallWithFallback(
+        async (endpointUrl) => {
+          const chainConfig = {
+            ...network.chain,
+            url: endpointUrl
+          }
+          
+          return new SessionKit({
+            appName: 'HoneyFarmers',
+            chains: [chainConfig],
+            ui: new WebRenderer(),
+            walletPlugins: [
+              new WalletPluginCloudWallet(),
+              new WalletPluginAnchor(),
+              new WalletPluginWombat(),
+            ],
+          })
+        },
+        'SessionKit initialization',
+        3000
+      )
+      
+      setSessionKit(kit)
 
-    // If we have stored session data for the current network, try to restore
-    if (storedSession && storedSession.chainId === network.chain.id) {
-      try {
-        const restored = await kit.restore()
-        if (restored && restored.actor.toString() === storedSession.actor) {
-          // Session restored successfully and matches our stored data
-          setSession(restored)
-          console.log('Session restored successfully from storage')
-          return
-        } else {
-          console.warn('Restored session does not match stored data, clearing stored session')
+      // If we have stored session data for the current network, try to restore
+      if (storedSession && storedSession.chainId === network.chain.id) {
+        try {
+          const restored = await kit.restore()
+          if (restored && restored.actor.toString() === storedSession.actor) {
+            // Session restored successfully and matches our stored data
+            setSession(restored)
+            return
+          } else {
+            console.warn('Restored session does not match stored data, clearing stored session')
+            clearSessionData()
+          }
+        } catch (err) {
+          console.warn('Failed to restore session:', err)
+          // Clear stored data if restoration fails
           clearSessionData()
         }
+      }
+      
+      // If no valid stored session or restoration failed, clear conflicting storage
+      if (!storedSession || storedSession.chainId !== network.chain.id) {
+        clearNetworkSpecificStorage(true)
+      }
+      
+      // Try one more restore attempt after clearing conflicting storage
+      try {
+        const restored = await kit.restore()
+        if (restored) {
+          setSession(restored)
+          // Save the restored session for future persistence
+          saveSessionData({
+            actor: restored.actor.toString(),
+            permission: restored.permission.toString(),
+            chainId: restored.chain.id.toString()
+          }, selectedNetwork)
+        }
       } catch (err) {
-        console.warn('Failed to restore session:', err)
-        // Clear stored data if restoration fails
-        clearSessionData()
+        console.warn('Final restore attempt failed:', err)
       }
-    }
-    
-    // If no valid stored session or restoration failed, clear conflicting storage
-    if (!storedSession || storedSession.chainId !== network.chain.id) {
-      clearNetworkSpecificStorage(true)
-    }
-    
-    // Try one more restore attempt after clearing conflicting storage
-    try {
-      const restored = await kit.restore()
-      if (restored) {
-        setSession(restored)
-        // Save the restored session for future persistence
-        saveSessionData({
-          actor: restored.actor.toString(),
-          permission: restored.permission.toString(),
-          chainId: restored.chain.id.toString()
-        }, selectedNetwork)
-        console.log('Session restored after clearing conflicting storage')
-      }
+      
     } catch (err) {
-      console.warn('Final restore attempt failed:', err)
+      console.error('Failed to initialize SessionKit with any endpoint:', err)
+      setError(`Failed to connect to any ${selectedNetwork} endpoint`)
     }
     
     setIsInitializing(false)
@@ -326,13 +397,22 @@ function App() {
     setError(null)
     
     try {
-      const network = networks[selectedNetwork]
-      const result = await session.client.v1.chain.get_table_rows({
-        code: network.contractAccount,
-        scope: session.actor.toString(),
-        table: 'resources',
-        limit: 100
-      })
+      const result = await makeAPICallWithFallback(
+        async (endpointUrl) => {
+          // Create a new client with the fallback endpoint
+          const network = networks[selectedNetwork]
+          const { APIClient } = await import('@wharfkit/session')
+          const client = new APIClient({ url: endpointUrl })
+          
+          return await client.v1.chain.get_table_rows({
+            code: network.contractAccount,
+            scope: session.actor.toString(),
+            table: 'resources',
+            limit: 100
+          })
+        },
+        'fetchResourceBalances'
+      )
       
       setResourceBalances(result.rows || [])
     } catch (err) {
@@ -345,13 +425,21 @@ function App() {
     if (!session) return null
     
     try {
-      const network = networks[selectedNetwork]
-      const result = await session.client.v1.chain.get_table_rows({
-        code: network.contractAccount,
-        scope: network.contractAccount,
-        table: 'beevars',
-        limit: 100
-      })
+      const result = await makeAPICallWithFallback(
+        async (endpointUrl) => {
+          const network = networks[selectedNetwork]
+          const { APIClient } = await import('@wharfkit/session')
+          const client = new APIClient({ url: endpointUrl })
+          
+          return await client.v1.chain.get_table_rows({
+            code: network.contractAccount,
+            scope: network.contractAccount,
+            table: 'beevars',
+            limit: 100
+          })
+        },
+        'fetchBeeVars'
+      )
       
       return result.rows || []
     } catch (err) {
@@ -364,13 +452,21 @@ function App() {
     if (!session) return null
     
     try {
-      const network = networks[selectedNetwork]
-      const result = await session.client.v1.chain.get_table_rows({
-        code: network.contractAccount,
-        scope: network.contractAccount,
-        table: 'hivevars',
-        limit: 100
-      })
+      const result = await makeAPICallWithFallback(
+        async (endpointUrl) => {
+          const network = networks[selectedNetwork]
+          const { APIClient } = await import('@wharfkit/session')
+          const client = new APIClient({ url: endpointUrl })
+          
+          return await client.v1.chain.get_table_rows({
+            code: network.contractAccount,
+            scope: network.contractAccount,
+            table: 'hivevars',
+            limit: 100
+          })
+        },
+        'fetchHiveVars'
+      )
       
       return result.rows || []
     } catch (err) {
@@ -384,13 +480,21 @@ function App() {
     
     setLoadingHives(true)
     try {
-      const network = networks[selectedNetwork]
-      const result = await session.client.v1.chain.get_table_rows({
-        code: network.contractAccount,
-        scope: session.actor.toString(),
-        table: 'staked',
-        limit: 100
-      })
+      const result = await makeAPICallWithFallback(
+        async (endpointUrl) => {
+          const network = networks[selectedNetwork]
+          const { APIClient } = await import('@wharfkit/session')
+          const client = new APIClient({ url: endpointUrl })
+          
+          return await client.v1.chain.get_table_rows({
+            code: network.contractAccount,
+            scope: session.actor.toString(),
+            table: 'staked',
+            limit: 100
+          })
+        },
+        'fetchStakedHives'
+      )
       
       // Fetch hive asset details from AtomicAssets API
       const hivesWithDetails = await Promise.all(
@@ -476,7 +580,6 @@ function App() {
         })
       )
       
-      // Debug: Log the processed hives with staked_items
       setStakedHives(hivesWithDetails)
       
       // Fetch bee assets for each staked hive
@@ -618,33 +721,6 @@ function App() {
     }
   }
 
-  // Test function to debug API calls
-  const testUnstakedHivesAPI = async () => {
-    if (!session) {
-      console.log('No session available for testing')
-      return
-    }
-    
-    const apiBaseUrl = selectedNetwork === 'mainnet' 
-      ? 'https://aa.neftyblocks.com/atomicassets/v1' 
-      : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
-    
-    const testUrl = `${apiBaseUrl}/assets?owner=${session.actor}&collection_name=farmforhoney&page=1&limit=10`
-    console.log('Testing API call:', testUrl)
-    
-    try {
-      const response = await fetch(testUrl)
-      const data = await response.json()
-      console.log('Test API response:', data)
-    } catch (err) {
-      console.error('Test API error:', err)
-    }
-  }
-  
-  // Make test function available globally for debugging
-  if (typeof window !== 'undefined') {
-    (window as any).testUnstakedHivesAPI = testUnstakedHivesAPI
-  }
 
   const fetchUnstakedHives = async (currentStakedHives?: StakedHive[]) => {
     if (!session) return
@@ -665,8 +741,8 @@ function App() {
       // Fetch user's hive assets from AtomicAssets API
       const apiUrl = `${apiBaseUrl}/assets?owner=${session.actor}&collection_name=farmforhoney&page=1&limit=100`
       const response = await fetch(apiUrl)
-      
-      if (response.ok) {
+
+if (response.ok) {
         const assetData = await response.json()
         if (assetData.success && assetData.data) {
           const unstaked: BeeAsset[] = []
@@ -1152,8 +1228,6 @@ function App() {
   }
 
   const handleNetworkChange = (network: NetworkType) => {
-    console.log('Network change requested to:', network)
-    
     setSelectedNetwork(network)
     
     // Clear current session data - initializeSessionKit will handle restoration

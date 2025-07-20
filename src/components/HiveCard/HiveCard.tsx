@@ -142,8 +142,10 @@ const HiveCard: React.FC<HiveCardProps> = ({
       <div className="hive-main-content">
         <div className="hive-image-container">
           {hive.asset_details?.immutable_data?.img ? (
-            <img 
-              src={hive.asset_details.immutable_data.img} 
+            <img
+              src={hive.asset_details.immutable_data.img.startsWith('http') ?
+                   hive.asset_details.immutable_data.img :
+                   `https://ipfs.neftyblocks.io/ipfs/${hive.asset_details.immutable_data.img}`}
               alt={hive.asset_details.immutable_data.name || `Hive #${hive.hive_id}`}
               className="hive-image"
               onError={(e) => {

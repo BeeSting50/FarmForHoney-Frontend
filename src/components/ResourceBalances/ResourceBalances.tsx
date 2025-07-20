@@ -95,9 +95,6 @@ const ResourceBalances: React.FC<ResourceBalancesProps> = ({
         })}
       </div>
       
-      <div className="total-resources">
-        <span>Total Resources: {resourceBalances.length}</span>
-      </div>
     </div>
   )
 }
