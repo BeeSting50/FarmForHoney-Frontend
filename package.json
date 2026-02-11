@@ -25,12 +25,14 @@
     "@wharfkit/web-renderer": "^1.4.3",
     "buffer": "^6.0.3",
     "express": "^5.2.1",
+    "hmac-drbg": "^1.0.1",
+    "minimalistic-crypto-utils": "^1.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "overrides": {
     "eosjs": "^22.1.0",
-    "elliptic": "^6.6.1"
+    "elliptic": "file:vendor/elliptic"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

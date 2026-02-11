@@ -1,9 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    preserveSymlinks: true,
+    alias: {
+      'hmac-drbg': path.resolve(__dirname, 'node_modules/hmac-drbg'),
+      'minimalistic-crypto-utils': path.resolve(__dirname, 'node_modules/minimalistic-crypto-utils'),
+    },
+  },
   plugins: [
     react(),
     nodePolyfills({
