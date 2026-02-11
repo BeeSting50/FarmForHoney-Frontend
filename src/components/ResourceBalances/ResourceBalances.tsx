@@ -67,8 +67,8 @@ const ResourceBalances: React.FC<ResourceBalancesProps> = ({
 
   return (
     <div className={`resource-balances ${className}`}>
-      <div className="resource-balances-header">
-        <h3>💰 Resource Balances</h3>
+      <div className="section-header">
+        <h2>Inventory & Resources</h2>
       </div>
       
       <div className="resource-grid">
@@ -82,19 +82,21 @@ const ResourceBalances: React.FC<ResourceBalancesProps> = ({
               className="resource-card"
               style={{ '--resource-color': config.color } as React.CSSProperties}
             >
-              <div className="resource-icon">
-                {config.icon}
+              <div className="resource-icon-wrapper">
+                <span className="resource-icon">{config.icon}</span>
+                <div className="resource-glow"></div>
               </div>
               <div className="resource-info">
-                <div className="resource-name">{config.displayName}</div>
-                <div className="resource-amount">{amount}</div>
+                <div className="resource-label">{config.displayName}</div>
+                <div className="resource-amount-group">
+                  <span className="resource-amount">{amount}</span>
+                </div>
               </div>
-              <div className="resource-glow"></div>
+              <div className="card-shine"></div>
             </div>
           )
         })}
       </div>
-      
     </div>
   )
 }

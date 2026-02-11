@@ -44,7 +44,7 @@ interface HiveCardProps {
   unstakedBees: BeeAsset[]
   hivevars?: any[]
   onClaimResources: (hiveId: string) => void
-  onFeedBee: (beeId: string) => void
+  onFeedBee: (hiveId: string) => void
   onUnstakeBee: (hiveId: string, beeId: string) => void
   onUnstakeHive: (hiveId: string) => void
   onStakeBee: (hiveId: string, beeId: string) => void
@@ -94,24 +94,33 @@ const HiveCard: React.FC<HiveCardProps> = ({
   
   // State for dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const totalSlots = hive.availableSlots ?? hive.max_slots ?? 0
+  const freeSlots = Math.max(totalSlots - hiveBees.length, 0)
   
   return (
-    <div className="hive-card">
+    <div className={`hive-card rarity-${(hiveRarity || 'common').toLowerCase()}`}>
       <div className="hive-header">
-        <h3>{hive.asset_details?.immutable_data?.name || `Hive #${hive.hive_id}`}</h3>
+        <div className="hive-title-group">
+          <span className={`rarity-badge ${(hiveRarity || 'common').toLowerCase()}`}>
+            {rarityDisplayName}
+          </span>
+          <h3>{hive.asset_details?.immutable_data?.name || `Hive #${hive.hive_id}`}</h3>
+        </div>
         <div className="hive-actions">
           <button 
             className="claim-btn"
             onClick={() => onClaimResources(hive.hive_id)}
           >
-            💰 Claim Resources
+            <span className="btn-icon">💰</span>
+            <span className="btn-text">Claim Resources</span>
           </button>
           <div className="dropdown-container">
             <button 
               className="dropdown-toggle"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              title="Hive Settings"
             >
-              ⚙️ Actions ▼
+              <span className="settings-icon">⚙️</span>
             </button>
             {isDropdownOpen && (
               <div className="dropdown-menu">
@@ -122,7 +131,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
                     setIsDropdownOpen(false)
                   }}
                 >
-                  ⬆️ Upgrade Hive
+                  <span className="item-icon">⬆️</span> Upgrade Hive
                 </button>
                 <button 
                   className="dropdown-item unstake-item"
@@ -131,7 +140,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
                     setIsDropdownOpen(false)
                   }}
                 >
-                  📤 Unstake Hive
+                  <span className="item-icon">📤</span> Unstake Hive
                 </button>
               </div>
             )}
@@ -154,37 +163,54 @@ const HiveCard: React.FC<HiveCardProps> = ({
             />
           ) : (
             <div className="hive-placeholder">
-              🏠
+              <span className="placeholder-icon">🏠</span>
             </div>
           )}
+          <div className="hive-level-tag">LVL {hiveLevel}</div>
         </div>
         
         <div className="hive-stats">
-          <div className="health-section">
-            <div className="health-label">
-              <span className="health-icon">❤️</span>
-              <span>Health ({rarityDisplayName})</span>
-              <span className="health-value">
-                {hive.health || 0}/{maxHealth}
+          <div className="stat-card health-section">
+            <div className="stat-header">
+              <div className="stat-label">
+                <span className="stat-icon">❤️</span>
+                <span>Durability</span>
+              </div>
+              <span className="stat-value">
+                {hive.health || 0} / {maxHealth}
               </span>
             </div>
-            <div className="health-bar">
+            <div className="progress-bar-container">
               <div 
-                className="health-fill" 
+                className="progress-fill health-fill" 
                 style={{
                   width: `${Math.min(((hive.health || 0) / maxHealth) * 100, 100)}%`
                 }}
-              ></div>
+              >
+                <div className="shimmer"></div>
+              </div>
             </div>
           </div>
           
-          <div className="slots-section">
-            <div className="slots-label">
-              <span className="slots-icon">🏠</span>
-              <span>Level {hiveLevel}</span>
-              <span className="slots-value">
-                {hive.availableSlots || 0}/{hive.max_slots || 0}
+          <div className="stat-card slots-section">
+            <div className="stat-header">
+              <div className="stat-label">
+                <span className="stat-icon">🐝</span>
+                <span>Capacity</span>
+              </div>
+              <span className="stat-value">
+                {hiveBees.length} / {totalSlots}
               </span>
+            </div>
+            <div className="progress-bar-container">
+              <div 
+                className="progress-fill slots-fill" 
+                style={{
+                  width: `${Math.min((hiveBees.length / (totalSlots || 1)) * 100, 100)}%`
+                }}
+              >
+                <div className="shimmer"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -211,7 +237,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
         )}
         
         {/* Show unstaked bees if there are available slots and unstaked bees */}
-        {(hive.availableSlots || 0) > 0 && unstakedBees.length > 0 && (
+        {freeSlots > 0 && unstakedBees.length > 0 && (
           <div className="unstaked-bees-section">
             <h5>🐝 Available Bees to Stake ({unstakedBees.length})</h5>
             <div className="bees-grid">
