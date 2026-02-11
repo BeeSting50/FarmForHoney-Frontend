@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import Header from '../Header'
 import { Session } from '@wharfkit/session'
+import { IPFS_GATEWAY } from '../../constants/ipfs'
 import './Dashboard.css'
 
 // Lazy load heavy components
@@ -59,7 +60,6 @@ interface DashboardProps {
   beeAssets: BeeAsset[]
   unstakedBees: BeeAsset[]
   unstakedHives: BeeAsset[]
-  beevars?: any[]
   hivevars?: any[]
   loadingHives: boolean
   mobileMenuOpen: boolean
@@ -178,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="item-image">
                           {hive.immutable_data.img ? (
                             <img
-                              src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `https://ipfs.io/ipfs/${hive.immutable_data.img}`}
+                              src={hive.immutable_data.img.startsWith('http') ? hive.immutable_data.img : `${IPFS_GATEWAY}${hive.immutable_data.img}`}
                               alt={hive.immutable_data.name || 'Hive'}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement

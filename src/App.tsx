@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Session, SessionKit } from '@wharfkit/session'
 import { WebRenderer } from '@wharfkit/web-renderer'
 import './App.css'
@@ -54,6 +54,37 @@ interface BeeAsset {
 
 type NetworkType = 'mainnet' | 'testnet'
 
+const NETWORKS = {
+  mainnet: {
+    chain: {
+      id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+      url: 'https://wax.greymass.com',
+      name: 'WAX'
+    },
+    endpoints: [
+      { url: 'https://wax.greymass.com', name: 'Greymass' },
+      { url: 'https://api.wax.alohaeos.com', name: 'Aloha EOS' },
+      { url: 'https://wax.eosphere.io', name: 'EOSphere' }
+    ],
+    contractAccount: 'farmforhoney' // Replace with actual contract account
+  },
+  testnet: {
+    chain: {
+      id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
+      url: 'https://testnet.waxsweden.org',
+      name: 'WAX Testnet'
+    },
+    endpoints: [
+      { url: 'https://testnet.waxsweden.org', name: 'WAX Sweden' },
+      { url: 'https://testnet-wax.3dkrender.com', name: '3DK Render' },
+      { url: 'https://api.waxtest.waxgalaxy.io', name: 'WAX Galaxy' },
+      { url: 'https://api.waxtest.alohaeos.com', name: 'Aloha EOS' },
+      { url: 'https://waxtest.eu.eosamsterdam.net', name: 'EOS Amsterdam' }
+    ],
+    contractAccount: 'farmforhoney' // Replace with actual testnet contract account
+  }
+} as const
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionKit, setSessionKit] = useState<SessionKit | null>(null)
@@ -71,7 +102,7 @@ function App() {
   })
   const [resourceBalances, setResourceBalances] = useState<ResourceBalance[]>([])
   const [stakedHives, setStakedHives] = useState<StakedHive[]>([])
-  const [beevars, setBeevars] = useState<any[]>([])
+  const [, setBeevars] = useState<any[]>([])
   const [hivevars, setHivevars] = useState<any[]>([])
   const [beeAssets, setBeeAssets] = useState<BeeAsset[]>([])  
   const [unstakedBees, setUnstakedBees] = useState<BeeAsset[]>([])
@@ -79,41 +110,10 @@ function App() {
   const [loadingHives, setLoadingHives] = useState(false)
   const [, setLoadingBees] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(false)
+  const isInitializingRef = useRef(false)
   const [showEarningsPopup, setShowEarningsPopup] = useState(false)
   const [earnings, setEarnings] = useState<ResourceBalance[]>([])
   const [currentPage, setCurrentPage] = useState('dashboard')
-
-  const networks = {
-    mainnet: {
-      chain: {
-        id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
-        url: 'https://wax.greymass.com',
-        name: 'WAX'
-      },
-      endpoints: [
-        { url: 'https://wax.greymass.com', name: 'Greymass' },
-        { url: 'https://api.wax.alohaeos.com', name: 'Aloha EOS' },
-        { url: 'https://wax.eosphere.io', name: 'EOSphere' }
-      ],
-      contractAccount: 'farmforhoney' // Replace with actual contract account
-    },
-    testnet: {
-      chain: {
-        id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
-        url: 'https://testnet.waxsweden.org',
-        name: 'WAX Testnet'
-      },
-      endpoints: [
-        { url: 'https://testnet.waxsweden.org', name: 'WAX Sweden' },
-        { url: 'https://testnet-wax.3dkrender.com', name: '3DK Render' },
-        { url: 'https://api.waxtest.waxgalaxy.io', name: 'WAX Galaxy' },
-        { url: 'https://api.waxtest.alohaeos.com', name: 'Aloha EOS' },
-        { url: 'https://waxtest.eu.eosamsterdam.net', name: 'EOS Amsterdam' }
-      ],
-      contractAccount: 'farmforhoney' // Replace with actual testnet contract account
-    }
-  }
 
   const parseAmount = (amount: string | number): number => {
     const value = typeof amount === 'string' ? parseFloat(amount) : amount
@@ -127,9 +127,14 @@ function App() {
       resource_name: String(row.resource_name ?? '').toUpperCase(),
     }))
 
-  const fetchWithTimeout = async (url: string, timeoutMs = 10000) => {
+  const fetchWithTimeout = async (url: string, timeoutMs = 10000, signal?: AbortSignal) => {
+    if (signal) {
+      return fetch(url, { signal })
+    }
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
     try {
       return await fetch(url, { signal: controller.signal })
     } finally {
@@ -139,11 +144,11 @@ function App() {
 
   // Retry mechanism for API calls with fallback endpoints
   const makeAPICallWithFallback = async <T,>(
-    apiCall: (endpoint: string) => Promise<T>,
+    apiCall: (endpoint: string, signal: AbortSignal) => Promise<T>,
     operation: string,
     timeout: number = 5000
   ): Promise<T> => {
-    const network = networks[selectedNetwork]
+    const network = NETWORKS[selectedNetwork]
     const endpoints = network.endpoints
     
     let lastError: Error | null = null
@@ -151,29 +156,27 @@ function App() {
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i]
       const endpointUrl = endpoint.url
+      const abortController = new AbortController()
+      const timeoutHandle = setTimeout(() => abortController.abort(), timeout)
       
       try {
-        // Create a timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout)
-        })
-        
-        // Race between the API call and timeout
-        const result = await Promise.race([
-          apiCall(endpointUrl),
-          timeoutPromise
-        ])
-        
+        const result = await apiCall(endpointUrl, abortController.signal)
         return result
         
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        const errorMsg = abortController.signal.aborted
+          ? `Timeout after ${timeout}ms`
+          : error instanceof Error
+            ? error.message
+            : 'Unknown error'
         lastError = error instanceof Error ? error : new Error(errorMsg)
         
         // If this isn't the last endpoint, continue to next
         if (i < endpoints.length - 1) {
           continue
         }
+      } finally {
+        clearTimeout(timeoutHandle)
       }
     }
     
@@ -322,23 +325,22 @@ function App() {
   }
 
   const initializeSessionKit = async () => {
-    if (isInitializing) return
-    setIsInitializing(true)
+    if (isInitializingRef.current) return
+    isInitializingRef.current = true
     
-    const network = networks[selectedNetwork]
+    const network = NETWORKS[selectedNetwork]
     
     // Check for stored session data first
     const storedSession = getStoredSessionData(selectedNetwork, true)
     
     // If stored session is for a different network, clear conflicting storage first
-    if (storedSession && storedSession.chainId !== network.chain.id) {
-      clearNetworkSpecificStorage(true)
-      setIsInitializing(false)
-      return // Exit early to let the network switch trigger a new initialization
-    }
-    
-    // Use fallback system for SessionKit initialization
     try {
+      if (storedSession && storedSession.chainId !== network.chain.id) {
+        clearNetworkSpecificStorage(true)
+        return // Exit early to let the network switch trigger a new initialization
+      }
+
+      // Use fallback system for SessionKit initialization
       const kit = await makeAPICallWithFallback(
         async (endpointUrl) => {
           const chainConfig = {
@@ -417,9 +419,9 @@ function App() {
     } catch (err) {
       console.error('Failed to initialize SessionKit with any endpoint:', err)
       setError(`Failed to connect to any ${selectedNetwork} endpoint`)
+    } finally {
+      isInitializingRef.current = false
     }
-    
-    setIsInitializing(false)
   }
 
   const fetchResourceBalances = async (): Promise<ResourceBalance[]> => {
@@ -431,7 +433,7 @@ function App() {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
           // Create a new client with the fallback endpoint
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -461,7 +463,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -488,7 +490,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -516,7 +518,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -641,42 +643,37 @@ function App() {
     
     setLoadingBees(true)
     try {
-      const allBeeIds: string[] = []
-      
-      // Collect all bee IDs from all hives
-      hives.forEach(hive => {
-        allBeeIds.push(...hive.staked_items)
-      })
+      const allBeeIds = Array.from(
+        new Set(hives.flatMap((hive) => hive.staked_items))
+      )
       
       // Get the correct API base URL for the selected network
       const apiBaseUrl = selectedNetwork === 'mainnet' 
         ? 'https://aa.neftyblocks.com/atomicassets/v1' 
         : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
       
-      // Fetch asset details from AtomicAssets API
       const beeAssets: BeeAsset[] = []
-      for (const beeId of allBeeIds) {
+      if (allBeeIds.length > 0) {
         try {
-          // Use AtomicAssets API to get properly deserialized data
-            const apiUrl = `${apiBaseUrl}/assets/${beeId}`
-             const response = await fetchWithTimeout(apiUrl)
-             if (response.ok) {
-               const assetData = await response.json()
-               if (assetData.success && assetData.data) {
-                  const asset = assetData.data
+          const idsParam = encodeURIComponent(allBeeIds.join(','))
+          const apiUrl = `${apiBaseUrl}/assets?ids=${idsParam}&limit=${allBeeIds.length}`
+          const response = await fetchWithTimeout(apiUrl)
 
-                  const processedAsset = {
-                    asset_id: asset.asset_id,
-                    template_id: asset.template?.template_id,
-                    mutable_data: asset.mutable_data || {},
-                    immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
-                  }
-                  
-                  beeAssets.push(processedAsset)
-                }
-             }
+          if (response.ok) {
+            const assetData = await response.json()
+            if (assetData.success && assetData.data) {
+              for (const asset of assetData.data) {
+                beeAssets.push({
+                  asset_id: asset.asset_id,
+                  template_id: asset.template?.template_id,
+                  mutable_data: asset.mutable_data || {},
+                  immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
+                })
+              }
+            }
+          }
         } catch {
-          // Silently handle individual asset fetch errors
+          // Silently handle batch fetch errors
         }
       }
       
@@ -780,7 +777,7 @@ function App() {
       const apiUrl = `${apiBaseUrl}/assets?owner=${owner}&collection_name=farmforhoney&page=1&limit=100`
       const response = await fetchWithTimeout(apiUrl)
 
-if (response.ok) {
+      if (response.ok) {
         const assetData = await response.json()
         if (assetData.success && assetData.data) {
           const unstaked: BeeAsset[] = []
@@ -844,7 +841,7 @@ if (response.ok) {
     try {
       const balancesBefore = [...resourceBalances]
       
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'claim',
@@ -895,7 +892,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'feedbee',
@@ -928,7 +925,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'upgradehive',
@@ -960,7 +957,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       
       // Check if beeType and beeRarity are valid
       if (!beeType || !beeRarity) {
@@ -1001,7 +998,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'unstake',
@@ -1037,7 +1034,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'unstake',
@@ -1073,7 +1070,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: 'atomicassets',
         name: 'transfer',
@@ -1110,7 +1107,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: 'atomicassets',
         name: 'transfer',
@@ -1145,7 +1142,7 @@ if (response.ok) {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const tokenContract = 'farminghoney' // Token contract for all game tokens
       const normalizedTokenSymbol = tokenSymbol.trim().toUpperCase()
       const numericAmount = Number(amount)
@@ -1207,11 +1204,11 @@ if (response.ok) {
 
     const amounts = [hunyAmount, plnAmount, bwaxAmount, rjAmount]
     if (amounts.some((amount) => !Number.isFinite(amount) || amount < 0)) {
-      throw new Error('Withdrawal amounts must be valid positive numbers')
+      throw new Error('Withdrawal amounts must be valid non-negative numbers')
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'withdraw',
@@ -1373,7 +1370,6 @@ if (response.ok) {
               beeAssets={beeAssets}
               unstakedBees={unstakedBees}
               unstakedHives={unstakedHives}
-              beevars={beevars}
               hivevars={hivevars}
               loadingHives={loadingHives}
               mobileMenuOpen={mobileMenuOpen}

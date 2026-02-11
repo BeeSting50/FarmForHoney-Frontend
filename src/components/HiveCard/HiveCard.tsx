@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import BeeCard from '../BeeCard'
+import { IPFS_GATEWAY } from '../../constants/ipfs'
 import './HiveCard.css'
 
 interface BeeAsset {
@@ -154,7 +155,7 @@ const HiveCard: React.FC<HiveCardProps> = ({
             <img
               src={hive.asset_details.immutable_data.img.startsWith('http') ?
                    hive.asset_details.immutable_data.img :
-                   `https://ipfs.neftyblocks.io/ipfs/${hive.asset_details.immutable_data.img}`}
+                   `${IPFS_GATEWAY}${hive.asset_details.immutable_data.img}`}
               alt={hive.asset_details.immutable_data.name || `Hive #${hive.hive_id}`}
               className="hive-image"
               onError={(e) => {

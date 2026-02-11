@@ -24,15 +24,13 @@
     "@wharfkit/wallet-plugin-wombat": "^1.5.1",
     "@wharfkit/web-renderer": "^1.4.3",
     "buffer": "^6.0.3",
+    "elliptic": "^6.6.1",
     "express": "^5.2.1",
-    "hmac-drbg": "^1.0.1",
-    "minimalistic-crypto-utils": "^1.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "overrides": {
-    "eosjs": "^22.1.0",
-    "elliptic": "file:vendor/elliptic"
+    "eosjs": "^22.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

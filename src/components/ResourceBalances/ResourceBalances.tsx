@@ -12,24 +12,23 @@ interface ResourceBalancesProps {
   className?: string
 }
 
+const resourceConfig = {
+  HONEY: { icon: '🍯', displayName: 'Honey', color: '#f39c12' },
+  HNY: { icon: '🍯', displayName: 'Honey', color: '#f39c12' },
+  POLLEN: { icon: '🌼', displayName: 'Pollen', color: '#f1c40f' },
+  PLN: { icon: '🌼', displayName: 'Pollen', color: '#f1c40f' },
+  BEESWAX: { icon: '🕯️', displayName: 'Beeswax', color: '#e67e22' },
+  BWAX: { icon: '🕯️', displayName: 'Beeswax', color: '#e67e22' },
+  'ROYAL-JELLY': { icon: '👑', displayName: 'Royal Jelly', color: '#9b59b6' },
+  RJ: { icon: '👑', displayName: 'Royal Jelly', color: '#9b59b6' },
+  PROPOLIS: { icon: '🧪', displayName: 'Propolis', color: '#27ae60' },
+  PROP: { icon: '🧪', displayName: 'Propolis', color: '#27ae60' }
+}
+
 const ResourceBalances: React.FC<ResourceBalancesProps> = ({ 
   resourceBalances, 
   className = '' 
 }) => {
-  // Resource icons and display names mapping
-  const resourceConfig = {
-    'HONEY': { icon: '🍯', displayName: 'Honey', color: '#f39c12' },
-    'HNY': { icon: '🍯', displayName: 'Honey', color: '#f39c12' },
-    'POLLEN': { icon: '🌼', displayName: 'Pollen', color: '#f1c40f' },
-    'PLN': { icon: '🌼', displayName: 'Pollen', color: '#f1c40f' },
-    'BEESWAX': { icon: '🕯️', displayName: 'Beeswax', color: '#e67e22' },
-    'BWAX': { icon: '🕯️', displayName: 'Beeswax', color: '#e67e22' },
-    'ROYAL-JELLY': { icon: '👑', displayName: 'Royal Jelly', color: '#9b59b6' },
-    'RJ': { icon: '👑', displayName: 'Royal Jelly', color: '#9b59b6' },
-    'PROPOLIS': { icon: '🧪', displayName: 'Propolis', color: '#27ae60' },
-    'PROP': { icon: '🧪', displayName: 'Propolis', color: '#27ae60' }
-  }
-
   // Get resource config with fallback
   const getResourceConfig = (resourceName: string) => {
     const upperName = resourceName.toUpperCase()

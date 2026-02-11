@@ -9,19 +9,19 @@
 
   /* Game Design System Colors */
   --bg-main: #0a0a12;
-  --bg-card: rgba(30, 30, 50, 0.7);
-  --bg-card-hover: rgba(40, 40, 70, 0.8);
+  --bg-card: rgb(30 30 50 / 70%);
+  --bg-card-hover: rgb(40 40 70 / 80%);
   
   --primary: #f39c12;
-  --primary-glow: rgba(243, 156, 18, 0.5);
+  --primary-glow: rgb(243 156 18 / 50%);
   --secondary: #3498db;
-  --secondary-glow: rgba(52, 152, 219, 0.5);
+  --secondary-glow: rgb(52 152 219 / 50%);
   --accent: #e74c3c;
-  --accent-glow: rgba(231, 76, 60, 0.5);
+  --accent-glow: rgb(231 76 60 / 50%);
   --success: #2ecc71;
-  --success-glow: rgba(46, 204, 113, 0.5);
+  --success-glow: rgb(46 204 113 / 50%);
   
-  --text-main: #ffffff;
+  --text-main: #fff;
   --text-dim: #a0a0b0;
 
   /* Rarity Colors */
@@ -32,9 +32,9 @@
   --rarity-legendary: #f1c40f;
   --rarity-mythic: #e74c3c;
   
-  --glass: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  --glass: rgb(255 255 255 / 3%);
+  --glass-border: rgb(255 255 255 / 10%);
+  --glass-glow: 0 8px 32px 0 rgb(0 0 0 / 80%);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -57,8 +57,8 @@ body {
   min-height: 100vh;
   background: var(--bg-main);
   background-image: 
-    radial-gradient(circle at 20% 30%, rgba(243, 156, 18, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(52, 152, 219, 0.05) 0%, transparent 40%);
+    radial-gradient(circle at 20% 30%, rgb(243 156 18 / 5%) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgb(52 152 219 / 5%) 0%, transparent 40%);
 }
 
 * {
@@ -105,17 +105,4 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }
