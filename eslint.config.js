@@ -24,9 +24,9 @@ export default tseslint.config([
     rules: {
       ...reactHooks.configs.flat['recommended-latest'].rules,
       ...reactRefresh.configs.vite.rules,
-      'react-hooks/exhaustive-deps': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-namespace': 'off',
+      'react-hooks/exhaustive-deps': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-namespace': 'warn',
     },
   },
 ])

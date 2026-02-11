@@ -59,7 +59,6 @@ interface DashboardProps {
   beeAssets: BeeAsset[]
   unstakedBees: BeeAsset[]
   unstakedHives: BeeAsset[]
-  beevars?: any[]
   hivevars?: any[]
   loadingHives: boolean
   mobileMenuOpen: boolean
@@ -106,7 +105,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       <Header
         session={session}
         selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
         mobileMenuOpen={mobileMenuOpen}
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}

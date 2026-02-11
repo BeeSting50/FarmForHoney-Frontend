@@ -1,18 +1,11 @@
 import { Session } from '@wharfkit/session'
 import './Header.css'
 
-interface ResourceBalance {
-  key_id: string
-  amount: string | number
-  resource_name: string
-}
-
 type NetworkType = 'mainnet' | 'testnet'
 
 interface HeaderProps {
   session: Session | null
   selectedNetwork: NetworkType
-  resourceBalances: ResourceBalance[]
   mobileMenuOpen: boolean
   onNetworkChange: (network: NetworkType) => void
   onMobileMenuToggle: () => void

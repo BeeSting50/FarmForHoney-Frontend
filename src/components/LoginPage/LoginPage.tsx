@@ -5,16 +5,9 @@ import './LoginPage.css'
 
 type NetworkType = 'mainnet' | 'testnet'
 
-interface ResourceBalance {
-  key_id: string
-  amount: string | number
-  resource_name: string
-}
-
 interface LoginPageProps {
   session: Session | null
   selectedNetwork: NetworkType
-  resourceBalances: ResourceBalance[]
   mobileMenuOpen: boolean
   error: string | null
   onNetworkChange: (network: NetworkType) => void
@@ -26,7 +19,6 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({
   session,
   selectedNetwork,
-  resourceBalances,
   mobileMenuOpen,
   error,
   onNetworkChange,
@@ -39,7 +31,6 @@ const LoginPage: React.FC<LoginPageProps> = ({
       <Header
         session={session}
         selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
         mobileMenuOpen={mobileMenuOpen}
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}

@@ -12,7 +12,7 @@
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wallet-container {
@@ -42,7 +42,7 @@
   backdrop-filter: blur(20px);
   border-radius: 24px;
   border: 1px solid var(--glass-border);
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 45px rgb(0 0 0 / 30%);
 }
 
 .balance-section h3,
@@ -68,7 +68,7 @@
 /* Tab Navigation */
 .tab-navigation.centered {
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
   padding: 0.5rem;
   border-radius: 18px;
   border: 1px solid var(--glass-border);
@@ -94,7 +94,7 @@
 }
 
 .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(255 255 255 / 5%);
   color: var(--text-main);
   transform: translateY(-2px);
 }
@@ -113,7 +113,7 @@
 }
 
 .balance-item {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(255 255 255 / 3%);
   padding: 1.5rem;
   border-radius: 18px;
   border: 1px solid var(--glass-border);
@@ -126,7 +126,7 @@
 .balance-item:hover {
   transform: translateY(-5px);
   border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(255 255 255 / 6%);
 }
 
 .balance-item.compact {
@@ -166,7 +166,7 @@
 .form-group input,
 .form-group select {
   padding: 1.2rem;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgb(0 0 0 / 40%);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   color: white;
@@ -180,7 +180,7 @@
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 15px var(--primary-glow);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(0 0 0 / 60%);
 }
 
 .deposit-btn,
@@ -223,31 +223,37 @@
   margin-bottom: 2.5rem;
   font-weight: 700;
   text-align: center;
-  animation: fadeInDown 0.5s ease;
+  animation: fade-in-down 0.5s ease;
 }
 
 .error-message {
-  background: rgba(255, 77, 77, 0.15);
+  background: rgb(255 77 77 / 15%);
   color: #ff4d4d;
-  border: 1px solid rgba(255, 77, 77, 0.3);
+  border: 1px solid rgb(255 77 77 / 30%);
 }
 
 .success-message {
-  background: rgba(46, 204, 113, 0.15);
+  background: rgb(46 204 113 / 15%);
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.3);
+  border: 1px solid rgb(46 204 113 / 30%);
 }
 
-@keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Wallet Balances List */
 .wallet-balances {
   margin-top: 2rem;
   padding: 2rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   border-radius: 20px;
   border: 1px solid var(--glass-border);
 }
@@ -275,8 +281,8 @@
 .swap-iframe-container {
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
-  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 40px rgb(0 0 0 / 40%);
+  background: rgb(0 0 0 / 30%);
   border: 1px solid var(--glass-border);
 }
 
@@ -285,7 +291,7 @@
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .wallet-content {
     padding: 1rem;
   }

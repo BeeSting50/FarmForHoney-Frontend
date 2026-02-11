@@ -26,16 +26,9 @@ declare global {
 
 type NetworkType = 'mainnet' | 'testnet'
 
-interface ResourceBalance {
-  key_id: string
-  amount: string | number
-  resource_name: string
-}
-
 interface MarketplaceProps {
   session: Session
   selectedNetwork: NetworkType
-  resourceBalances: ResourceBalance[]
   mobileMenuOpen: boolean
   onNetworkChange: (network: NetworkType) => void
   onMobileMenuToggle: () => void
@@ -46,7 +39,6 @@ interface MarketplaceProps {
 const Marketplace: React.FC<MarketplaceProps> = ({
   session,
   selectedNetwork,
-  resourceBalances,
   mobileMenuOpen,
   onNetworkChange,
   onMobileMenuToggle,
@@ -71,7 +63,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({
       <Header
         session={session}
         selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
         mobileMenuOpen={mobileMenuOpen}
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}

@@ -54,6 +54,37 @@ interface BeeAsset {
 
 type NetworkType = 'mainnet' | 'testnet'
 
+const NETWORKS = {
+  mainnet: {
+    chain: {
+      id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+      url: 'https://wax.greymass.com',
+      name: 'WAX'
+    },
+    endpoints: [
+      { url: 'https://wax.greymass.com', name: 'Greymass' },
+      { url: 'https://api.wax.alohaeos.com', name: 'Aloha EOS' },
+      { url: 'https://wax.eosphere.io', name: 'EOSphere' }
+    ],
+    contractAccount: 'farmforhoney' // Replace with actual contract account
+  },
+  testnet: {
+    chain: {
+      id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
+      url: 'https://testnet.waxsweden.org',
+      name: 'WAX Testnet'
+    },
+    endpoints: [
+      { url: 'https://testnet.waxsweden.org', name: 'WAX Sweden' },
+      { url: 'https://testnet-wax.3dkrender.com', name: '3DK Render' },
+      { url: 'https://api.waxtest.waxgalaxy.io', name: 'WAX Galaxy' },
+      { url: 'https://api.waxtest.alohaeos.com', name: 'Aloha EOS' },
+      { url: 'https://waxtest.eu.eosamsterdam.net', name: 'EOS Amsterdam' }
+    ],
+    contractAccount: 'farmforhoney' // Replace with actual testnet contract account
+  }
+} as const
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionKit, setSessionKit] = useState<SessionKit | null>(null)
@@ -71,7 +102,7 @@ function App() {
   })
   const [resourceBalances, setResourceBalances] = useState<ResourceBalance[]>([])
   const [stakedHives, setStakedHives] = useState<StakedHive[]>([])
-  const [beevars, setBeevars] = useState<any[]>([])
+  const [, setBeevars] = useState<any[]>([])
   const [hivevars, setHivevars] = useState<any[]>([])
   const [beeAssets, setBeeAssets] = useState<BeeAsset[]>([])  
   const [unstakedBees, setUnstakedBees] = useState<BeeAsset[]>([])
@@ -85,37 +116,6 @@ function App() {
   const [earnings, setEarnings] = useState<ResourceBalance[]>([])
   const [currentPage, setCurrentPage] = useState('dashboard')
 
-  const networks = {
-    mainnet: {
-      chain: {
-        id: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
-        url: 'https://wax.greymass.com',
-        name: 'WAX'
-      },
-      endpoints: [
-        { url: 'https://wax.greymass.com', name: 'Greymass' },
-        { url: 'https://api.wax.alohaeos.com', name: 'Aloha EOS' },
-        { url: 'https://wax.eosphere.io', name: 'EOSphere' }
-      ],
-      contractAccount: 'farmforhoney' // Replace with actual contract account
-    },
-    testnet: {
-      chain: {
-        id: 'f16b1833c747c43682f4386fca9cbb327929334a762755ebec17f6f23c9b8a12',
-        url: 'https://testnet.waxsweden.org',
-        name: 'WAX Testnet'
-      },
-      endpoints: [
-        { url: 'https://testnet.waxsweden.org', name: 'WAX Sweden' },
-        { url: 'https://testnet-wax.3dkrender.com', name: '3DK Render' },
-        { url: 'https://api.waxtest.waxgalaxy.io', name: 'WAX Galaxy' },
-        { url: 'https://api.waxtest.alohaeos.com', name: 'Aloha EOS' },
-        { url: 'https://waxtest.eu.eosamsterdam.net', name: 'EOS Amsterdam' }
-      ],
-      contractAccount: 'farmforhoney' // Replace with actual testnet contract account
-    }
-  }
-
   const parseAmount = (amount: string | number): number => {
     const value = typeof amount === 'string' ? parseFloat(amount) : amount
     return Number.isFinite(value) ? value : 0
@@ -128,6 +128,17 @@ function App() {
       resource_name: String(row.resource_name ?? '').toUpperCase(),
     }))
 
+  const mapHiveStakedItems = (hive: any): string[] => {
+    const stakedItems: string[] = []
+    if (hive.worker_ids && Array.isArray(hive.worker_ids)) {
+      stakedItems.push(...hive.worker_ids.map((id: any) => id.toString()))
+    }
+    if (hive.queen_id && hive.queen_id !== 0) {
+      stakedItems.push(hive.queen_id.toString())
+    }
+    return stakedItems
+  }
+
   const fetchWithTimeout = async (url: string, timeoutMs = 10000) => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -139,12 +150,12 @@ function App() {
   }
 
   // Retry mechanism for API calls with fallback endpoints
-  const makeAPICallWithFallback = async <T,>(
+  const makeAPICallWithFallback = useCallback(async <T,>(
     apiCall: (endpoint: string) => Promise<T>,
     operation: string,
     timeout: number = 5000
   ): Promise<T> => {
-    const network = networks[selectedNetwork]
+    const network = NETWORKS[selectedNetwork]
     const endpoints = network.endpoints
     
     let lastError: Error | null = null
@@ -154,19 +165,22 @@ function App() {
       const endpointUrl = endpoint.url
       
       try {
-        // Create a timeout promise
+        let timer: ReturnType<typeof setTimeout> | undefined
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout)
+          timer = setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout)
         })
-        
-        // Race between the API call and timeout
-        const result = await Promise.race([
-          apiCall(endpointUrl),
-          timeoutPromise
-        ])
-        
-        return result
-        
+
+        try {
+          const result = await Promise.race([
+            apiCall(endpointUrl),
+            timeoutPromise
+          ])
+          return result
+        } finally {
+          if (timer) {
+            clearTimeout(timer)
+          }
+        }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error'
         lastError = error instanceof Error ? error : new Error(errorMsg)
@@ -182,7 +196,7 @@ function App() {
     const errorMsg = `All endpoints failed for ${operation}. Last error: ${lastError?.message || 'Unknown error'}`
     console.error(errorMsg)
     throw new Error(errorMsg)
-  }
+  }, [selectedNetwork])
 
   useEffect(() => {
     if (session) {
@@ -192,7 +206,7 @@ function App() {
       fetchBeeVars().then(data => setBeevars(data || []))
       fetchHiveVars().then(data => setHivevars(data || []))
     }
-  }, [session])
+  }, [session]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -218,7 +232,7 @@ function App() {
     if (typeof window !== 'undefined') {
       localStorage.setItem(NETWORK_STORAGE_KEY, selectedNetwork)
     }
-  }, [selectedNetwork])
+  }, [makeAPICallWithFallback, selectedNetwork])
 
   const saveSessionData = (sessionData: any, network: string) => {
     if (typeof window !== 'undefined') {
@@ -325,7 +339,7 @@ function App() {
     setIsInitializing(true)
 
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
 
       // Check for stored session data first
       const storedSession = getStoredSessionData(selectedNetwork, true)
@@ -421,7 +435,7 @@ function App() {
       isInitializingRef.current = false
       setIsInitializing(false)
     }
-  }, [selectedNetwork])
+  }, [makeAPICallWithFallback, selectedNetwork])
 
   useEffect(() => {
     initializeSessionKit()
@@ -436,7 +450,7 @@ function App() {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
           // Create a new client with the fallback endpoint
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -466,7 +480,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -493,7 +507,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -521,7 +535,7 @@ function App() {
     try {
       const result = await makeAPICallWithFallback(
         async (endpointUrl) => {
-          const network = networks[selectedNetwork]
+          const network = NETWORKS[selectedNetwork]
           const { APIClient } = await import('@wharfkit/session')
           const client = new APIClient({ url: endpointUrl })
           
@@ -538,17 +552,11 @@ function App() {
       // Fetch hive asset details from AtomicAssets API
       const hivesWithDetails = await Promise.all(
         (result.rows || []).map(async (hive: any) => {
+          const staked_items = mapHiveStakedItems(hive)
+
           try {
             // Map blockchain data structure to frontend interface
             // Combine worker_ids and queen_id into staked_items array
-            const staked_items: string[] = []
-            if (hive.worker_ids && Array.isArray(hive.worker_ids)) {
-              staked_items.push(...hive.worker_ids.map((id: any) => id.toString()))
-            }
-            if (hive.queen_id && hive.queen_id !== 0) {
-              staked_items.push(hive.queen_id.toString())
-            }
-            
             // Get the correct API base URL for the selected network
             const apiBaseUrl = selectedNetwork === 'mainnet' 
               ? 'https://aa.neftyblocks.com/atomicassets/v1' 
@@ -600,13 +608,6 @@ function App() {
           } catch (err) {
             console.error(`Failed to fetch asset details for hive ${hive.hive_id}:`, err)
             // Return basic mapped structure even on error
-            const staked_items: string[] = []
-            if (hive.worker_ids && Array.isArray(hive.worker_ids)) {
-              staked_items.push(...hive.worker_ids.map((id: any) => id.toString()))
-            }
-            if (hive.queen_id && hive.queen_id !== 0) {
-              staked_items.push(hive.queen_id.toString())
-            }
             return {
               hive_id: hive.hive_id.toString(),
               staked_items: staked_items,
@@ -658,36 +659,40 @@ function App() {
         ? 'https://aa.neftyblocks.com/atomicassets/v1' 
         : 'https://aa-testnet.neftyblocks.com/atomicassets/v1'
       
-      // Fetch asset details from AtomicAssets API
-      const beeAssets: BeeAsset[] = []
-      for (const beeId of allBeeIds) {
-        try {
-          // Use AtomicAssets API to get properly deserialized data
+      const fetchedBeeAssets = await Promise.all(
+        allBeeIds.map(async (beeId) => {
+          try {
             const apiUrl = `${apiBaseUrl}/assets/${beeId}`
-             const response = await fetchWithTimeout(apiUrl)
-             if (response.ok) {
-               const assetData = await response.json()
-               if (assetData.success && assetData.data) {
-                  const asset = assetData.data
+            const response = await fetchWithTimeout(apiUrl)
+            if (!response.ok) {
+              console.warn(`Failed to fetch asset ${beeId}: HTTP ${response.status}`)
+              return null
+            }
 
-                  const processedAsset = {
-                    asset_id: asset.asset_id,
-                    template_id: asset.template?.template_id,
-                    mutable_data: asset.mutable_data || {},
-                    immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
-                  }
-                  
-                  beeAssets.push(processedAsset)
-                }
-             }
-        } catch {
-          // Silently handle individual asset fetch errors
-        }
-      }
-      
+            const assetData = await response.json()
+            if (!assetData.success || !assetData.data) {
+              console.warn(`Failed to parse asset ${beeId}: Invalid response payload`)
+              return null
+            }
+
+            const asset = assetData.data
+            return {
+              asset_id: asset.asset_id,
+              template_id: asset.template?.template_id,
+              mutable_data: asset.mutable_data || {},
+              immutable_data: asset.template?.immutable_data || asset.immutable_data || {}
+            } as BeeAsset
+          } catch (err) {
+            console.warn(`Failed to fetch asset ${beeId}:`, err)
+            return null
+          }
+        })
+      )
+
+      const beeAssets = fetchedBeeAssets.filter((asset): asset is BeeAsset => asset !== null)
       setBeeAssets(beeAssets)
-    } catch {
-      // Silently handle errors
+    } catch (err) {
+      console.error('Failed to fetch bee assets:', err)
     } finally {
       setLoadingBees(false)
     }
@@ -849,7 +854,7 @@ function App() {
     try {
       const balancesBefore = [...resourceBalances]
       
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'claim',
@@ -900,7 +905,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'feedbee',
@@ -933,7 +938,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'upgradehive',
@@ -965,7 +970,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       
       // Check if beeType and beeRarity are valid
       if (!beeType || !beeRarity) {
@@ -1006,7 +1011,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'unstake',
@@ -1042,7 +1047,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'unstake',
@@ -1078,7 +1083,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: 'atomicassets',
         name: 'transfer',
@@ -1115,7 +1120,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: 'atomicassets',
         name: 'transfer',
@@ -1150,7 +1155,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const tokenContract = 'farminghoney' // Token contract for all game tokens
       const normalizedTokenSymbol = tokenSymbol.trim().toUpperCase()
       const numericAmount = Number(amount)
@@ -1216,7 +1221,7 @@ function App() {
     }
     
     try {
-      const network = networks[selectedNetwork]
+      const network = NETWORKS[selectedNetwork]
       const action = {
         account: network.contractAccount,
         name: 'withdraw',
@@ -1320,7 +1325,6 @@ function App() {
         <LoginPage
           session={session}
           selectedNetwork={selectedNetwork}
-          resourceBalances={resourceBalances}
           mobileMenuOpen={mobileMenuOpen}
           error={error}
           onNetworkChange={handleNetworkChange}
@@ -1340,7 +1344,6 @@ function App() {
             <Marketplace
               session={session}
               selectedNetwork={selectedNetwork}
-              resourceBalances={resourceBalances}
               mobileMenuOpen={mobileMenuOpen}
               onNetworkChange={handleNetworkChange}
               onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1378,7 +1381,6 @@ function App() {
               beeAssets={beeAssets}
               unstakedBees={unstakedBees}
               unstakedHives={unstakedHives}
-              beevars={beevars}
               hivevars={hivevars}
               loadingHives={loadingHives}
               mobileMenuOpen={mobileMenuOpen}
