@@ -59,7 +59,7 @@
 
 .hives-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(450px, 100%), 1fr));
   gap: 2.5rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -113,12 +113,19 @@
 .inventory-section {
   margin-top: 4rem;
   padding: 2rem;
-  background: var(--bg-glass);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   border-radius: 30px;
   border: 1px solid var(--glass-border);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 500px) {
+  .hives-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 .inventory-category {

@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Session, SessionKit } from '@wharfkit/session'
 import { WebRenderer } from '@wharfkit/web-renderer'
 import './App.css'
@@ -79,7 +79,8 @@ function App() {
   const [loadingHives, setLoadingHives] = useState(false)
   const [, setLoadingBees] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(false)
+  const [, setIsInitializing] = useState(false)
+  const isInitializingRef = useRef(false)
   const [showEarningsPopup, setShowEarningsPopup] = useState(false)
   const [earnings, setEarnings] = useState<ResourceBalance[]>([])
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -182,10 +183,6 @@ function App() {
     console.error(errorMsg)
     throw new Error(errorMsg)
   }
-
-  useEffect(() => {
-    initializeSessionKit()
-  }, [selectedNetwork])
 
   useEffect(() => {
     if (session) {
@@ -321,106 +318,114 @@ function App() {
     }
   }
 
-  const initializeSessionKit = async () => {
-    if (isInitializing) return
-    setIsInitializing(true)
-    
-    const network = networks[selectedNetwork]
-    
-    // Check for stored session data first
-    const storedSession = getStoredSessionData(selectedNetwork, true)
-    
-    // If stored session is for a different network, clear conflicting storage first
-    if (storedSession && storedSession.chainId !== network.chain.id) {
-      clearNetworkSpecificStorage(true)
-      setIsInitializing(false)
-      return // Exit early to let the network switch trigger a new initialization
-    }
-    
-    // Use fallback system for SessionKit initialization
-    try {
-      const kit = await makeAPICallWithFallback(
-        async (endpointUrl) => {
-          const chainConfig = {
-            ...network.chain,
-            url: endpointUrl
-          }
-          
-          // Dynamically import wallet plugins to reduce initial bundle size
-          const [
-            { WalletPluginCloudWallet },
-            { WalletPluginAnchor },
-            { WalletPluginWombat }
-          ] = await Promise.all([
-            import('@wharfkit/wallet-plugin-cloudwallet'),
-            import('@wharfkit/wallet-plugin-anchor'),
-            import('@wharfkit/wallet-plugin-wombat')
-          ])
-          
-          return new SessionKit({
-            appName: 'HoneyFarmers',
-            chains: [chainConfig],
-            ui: new WebRenderer(),
-            walletPlugins: [
-              new WalletPluginCloudWallet(),
-              new WalletPluginAnchor(),
-              new WalletPluginWombat(),
-            ],
-          })
-        },
-        'SessionKit initialization',
-        3000
-      )
-      
-      setSessionKit(kit)
+  const initializeSessionKit = useCallback(async () => {
+    if (isInitializingRef.current) return
 
-      // If we have stored session data for the current network, try to restore
-      if (storedSession && storedSession.chainId === network.chain.id) {
-        try {
-          const restored = await kit.restore()
-          if (restored && restored.actor.toString() === storedSession.actor) {
-            // Session restored successfully and matches our stored data
-            setSession(restored)
-            return
-          } else {
-            console.warn('Restored session does not match stored data, clearing stored session')
+    isInitializingRef.current = true
+    setIsInitializing(true)
+
+    try {
+      const network = networks[selectedNetwork]
+
+      // Check for stored session data first
+      const storedSession = getStoredSessionData(selectedNetwork, true)
+
+      // If stored session is for a different network, clear conflicting storage first
+      if (storedSession && storedSession.chainId !== network.chain.id) {
+        clearNetworkSpecificStorage(true)
+        return // Exit early to let the network switch trigger a new initialization
+      }
+
+      // Use fallback system for SessionKit initialization
+      try {
+        const kit = await makeAPICallWithFallback(
+          async (endpointUrl) => {
+            const chainConfig = {
+              ...network.chain,
+              url: endpointUrl
+            }
+
+            // Dynamically import wallet plugins to reduce initial bundle size
+            const [
+              { WalletPluginCloudWallet },
+              { WalletPluginAnchor },
+              { WalletPluginWombat }
+            ] = await Promise.all([
+              import('@wharfkit/wallet-plugin-cloudwallet'),
+              import('@wharfkit/wallet-plugin-anchor'),
+              import('@wharfkit/wallet-plugin-wombat')
+            ])
+
+            return new SessionKit({
+              appName: 'HoneyFarmers',
+              chains: [chainConfig],
+              ui: new WebRenderer(),
+              walletPlugins: [
+                new WalletPluginCloudWallet(),
+                new WalletPluginAnchor(),
+                new WalletPluginWombat(),
+              ],
+            })
+          },
+          'SessionKit initialization',
+          3000
+        )
+
+        setSessionKit(kit)
+
+        // If we have stored session data for the current network, try to restore
+        if (storedSession && storedSession.chainId === network.chain.id) {
+          try {
+            const restored = await kit.restore()
+            if (restored && restored.actor.toString() === storedSession.actor) {
+              // Session restored successfully and matches our stored data
+              setSession(restored)
+              return
+            } else {
+              console.warn('Restored session does not match stored data, clearing stored session')
+              clearSessionData()
+            }
+          } catch (err) {
+            console.warn('Failed to restore session:', err)
+            // Clear stored data if restoration fails
             clearSessionData()
           }
+        }
+
+        // If no valid stored session or restoration failed, clear conflicting storage
+        if (!storedSession || storedSession.chainId !== network.chain.id) {
+          clearNetworkSpecificStorage(true)
+        }
+
+        // Try one more restore attempt after clearing conflicting storage
+        try {
+          const restored = await kit.restore()
+          if (restored) {
+            setSession(restored)
+            // Save the restored session for future persistence
+            saveSessionData({
+              actor: restored.actor.toString(),
+              permission: restored.permission.toString(),
+              chainId: restored.chain.id.toString()
+            }, selectedNetwork)
+          }
         } catch (err) {
-          console.warn('Failed to restore session:', err)
-          // Clear stored data if restoration fails
-          clearSessionData()
+          console.warn('Final restore attempt failed:', err)
         }
-      }
-      
-      // If no valid stored session or restoration failed, clear conflicting storage
-      if (!storedSession || storedSession.chainId !== network.chain.id) {
-        clearNetworkSpecificStorage(true)
-      }
-      
-      // Try one more restore attempt after clearing conflicting storage
-      try {
-        const restored = await kit.restore()
-        if (restored) {
-          setSession(restored)
-          // Save the restored session for future persistence
-          saveSessionData({
-            actor: restored.actor.toString(),
-            permission: restored.permission.toString(),
-            chainId: restored.chain.id.toString()
-          }, selectedNetwork)
-        }
+
       } catch (err) {
-        console.warn('Final restore attempt failed:', err)
+        console.error('Failed to initialize SessionKit with any endpoint:', err)
+        setError(`Failed to connect to any ${selectedNetwork} endpoint`)
       }
-      
-    } catch (err) {
-      console.error('Failed to initialize SessionKit with any endpoint:', err)
-      setError(`Failed to connect to any ${selectedNetwork} endpoint`)
+    } finally {
+      isInitializingRef.current = false
+      setIsInitializing(false)
     }
-    
-    setIsInitializing(false)
-  }
+  }, [selectedNetwork])
+
+  useEffect(() => {
+    initializeSessionKit()
+  }, [initializeSessionKit])
 
   const fetchResourceBalances = async (): Promise<ResourceBalance[]> => {
     if (!session) return []
@@ -780,7 +785,7 @@ function App() {
       const apiUrl = `${apiBaseUrl}/assets?owner=${owner}&collection_name=farmforhoney&page=1&limit=100`
       const response = await fetchWithTimeout(apiUrl)
 
-if (response.ok) {
+      if (response.ok) {
         const assetData = await response.json()
         if (assetData.success && assetData.data) {
           const unstaked: BeeAsset[] = []

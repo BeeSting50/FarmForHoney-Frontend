@@ -91,6 +91,16 @@
   box-shadow: 0 4px 15px var(--primary-glow);
 }
 
+.nav-item.nav-item-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-item.nav-item-disabled:hover {
+  background: transparent;
+  color: var(--text-dim);
+}
+
 .nav-icon {
   font-size: 1.1rem;
 }

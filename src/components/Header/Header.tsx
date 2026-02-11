@@ -91,9 +91,14 @@ function Header({
               <span className="nav-icon">💰</span>
               <span className="nav-text">Vault</span>
             </button>
-            <button className="nav-item">
+            <button
+              className="nav-item nav-item-disabled"
+              disabled
+              aria-disabled="true"
+              title="Stats coming soon"
+            >
               <span className="nav-icon">📊</span>
-              <span className="nav-text">Stats</span>
+              <span className="nav-text">Stats (Soon)</span>
             </button>
           </nav>
         </div>
