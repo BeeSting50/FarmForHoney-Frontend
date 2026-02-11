@@ -71,32 +71,35 @@ const Wallet: React.FC<WalletProps> = ({
     
     setIsLoadingBalances(true)
     try {
-      const balances: WalletBalance[] = []
-      
-      for (const token of tokenOptions) {
-        try {
-          const result = await session.client.v1.chain.get_currency_balance(
+      const results = await Promise.allSettled(
+        tokenOptions.map((token) =>
+          session.client.v1.chain.get_currency_balance(
             token.contract,
             session.actor.toString(),
             token.symbol
           )
-          
-          const amount = result.length > 0 ? parseFloat(result[0].toString().split(' ')[0]) : 0
-          balances.push({
+        )
+      )
+
+      const balances: WalletBalance[] = results.map((result, index) => {
+        const token = tokenOptions[index]
+        if (result.status === 'fulfilled') {
+          const amount = result.value.length > 0 ? parseFloat(result.value[0].toString().split(' ')[0]) : 0
+          return {
             symbol: token.symbol,
             amount,
             contract: token.contract
-          })
-        } catch (err) {
-          console.warn(`Failed to fetch ${token.symbol} balance:`, err)
-          balances.push({
-            symbol: token.symbol,
-            amount: 0,
-            contract: token.contract
-          })
+          }
         }
-      }
-      
+
+        console.warn(`Failed to fetch ${token.symbol} balance:`, result.reason)
+        return {
+          symbol: token.symbol,
+          amount: 0,
+          contract: token.contract
+        }
+      })
+
       setWalletBalances(balances)
     } catch (err) {
       console.error('Failed to fetch wallet balances:', err)
@@ -183,14 +186,14 @@ const Wallet: React.FC<WalletProps> = ({
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'swap':
+      case 'swap': {
         const swapUrl = selectedNetwork === 'mainnet' 
-          ? 'http://wax.alcor.exchange/swap-widget'
-          : 'http://waxtest.alcor.exchange/swap-widget'
+          ? 'https://wax.alcor.exchange/swap-widget'
+          : 'https://waxtest.alcor.exchange/swap-widget'
         
         return (
           <div className="swap-section">
-            <h3>Token Swap</h3>
+            <h3><span className="section-icon">🔄</span> Token Swap</h3>
             <p className="section-description">
               Swap tokens directly within the app using Alcor Exchange.
             </p>
@@ -206,11 +209,12 @@ const Wallet: React.FC<WalletProps> = ({
             </div>
           </div>
         )
+      }
       
       case 'deposit':
         return (
           <div className="deposit-section">
-            <h3>Deposit Tokens</h3>
+            <h3><span className="section-icon">📥</span> Deposit Tokens</h3>
             <p className="section-description">
               Deposit tokens from your wallet to the game contract for use in farming activities.
             </p>
@@ -219,11 +223,14 @@ const Wallet: React.FC<WalletProps> = ({
             <div className="wallet-balances">
               <h4>Your Wallet Balances</h4>
               {isLoadingBalances ? (
-                <div className="loading-balances">Loading wallet balances...</div>
+                <div className="loading-balances">
+                  <div className="loader"></div>
+                  <span>Loading wallet balances...</span>
+                </div>
               ) : (
                 <div className="balance-grid">
                   {tokenOptions.map(token => (
-                    <div key={token.symbol} className="wallet-balance-item">
+                    <div key={token.symbol} className="balance-item">
                       <span className="token-name">{token.name} ({token.symbol})</span>
                       <span className="token-amount">{getWalletBalance(token.symbol).toFixed(4)}</span>
                     </div>
@@ -234,7 +241,7 @@ const Wallet: React.FC<WalletProps> = ({
             
             <div className="deposit-form">
               <div className="form-group">
-                <label htmlFor="deposit-token">Token:</label>
+                <label htmlFor="deposit-token">Select Token</label>
                 <select
                   id="deposit-token"
                   value={depositToken}
@@ -248,7 +255,7 @@ const Wallet: React.FC<WalletProps> = ({
                 </select>
               </div>
               <div className="form-group">
-                <label htmlFor="deposit-amount">Amount:</label>
+                <label htmlFor="deposit-amount">Amount</label>
                 <input
                   id="deposit-amount"
                   type="number"
@@ -257,7 +264,7 @@ const Wallet: React.FC<WalletProps> = ({
                   max={getWalletBalance(depositToken)}
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="Enter amount to deposit"
+                  placeholder="0.0000"
                 />
               </div>
               <button
@@ -265,7 +272,7 @@ const Wallet: React.FC<WalletProps> = ({
                 onClick={handleDeposit}
                 disabled={isDepositing || !depositAmount || getWalletBalance(depositToken) === 0}
               >
-                {isDepositing ? 'Depositing...' : 'Deposit'}
+                {isDepositing ? 'Processing...' : 'Deposit to Game'}
               </button>
             </div>
           </div>
@@ -274,7 +281,7 @@ const Wallet: React.FC<WalletProps> = ({
       case 'withdraw':
         return (
           <div className="withdraw-section">
-            <h3>Withdraw Tokens</h3>
+            <h3><span className="section-icon">📤</span> Withdraw Tokens</h3>
             <p className="section-description">
               Withdraw tokens from the game contract back to your wallet.
             </p>
@@ -292,7 +299,7 @@ const Wallet: React.FC<WalletProps> = ({
                     max={getResourceBalance(token.symbol)}
                     value={withdrawAmounts[token.symbol as keyof typeof withdrawAmounts]}
                     onChange={(e) => handleWithdrawAmountChange(token.symbol, e.target.value)}
-                    placeholder={`Enter ${token.symbol} amount`}
+                    placeholder="0.0000"
                   />
                 </div>
               ))}
@@ -301,7 +308,7 @@ const Wallet: React.FC<WalletProps> = ({
                 onClick={handleWithdraw}
                 disabled={isWithdrawing}
               >
-                {isWithdrawing ? 'Withdrawing...' : 'Withdraw'}
+                {isWithdrawing ? 'Processing...' : 'Withdraw to Wallet'}
               </button>
             </div>
           </div>

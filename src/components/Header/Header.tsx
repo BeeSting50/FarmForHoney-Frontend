@@ -24,7 +24,6 @@ interface HeaderProps {
 function Header({
   session,
   selectedNetwork,
-  resourceBalances,
   mobileMenuOpen,
   onNetworkChange,
   onMobileMenuToggle,
@@ -58,53 +57,85 @@ function Header({
   // Dashboard header
   return (
     <div className="dashboard-header">
-      <div className="header-top">
-        <h1>🍯 HoneyFarmers Dashboard</h1>
-        <button 
-          className={`mobile-menu-toggle ${mobileMenuOpen ? 'active' : ''}`}
-          onClick={onMobileMenuToggle}
-          aria-label="Toggle mobile menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-      
-      <div className={`user-info ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="user-details">
-          <span>👤 {session.actor.toString()}</span>
-          <span>🌐 {selectedNetwork}</span>
-          {resourceBalances.find(r => r.resource_name === 'ROYAL-JELLY') && (
-            <span className="royal-jelly-balance">
-              🍯 {parseFloat(resourceBalances.find(r => r.resource_name === 'ROYAL-JELLY')?.amount?.toString() || '0').toFixed(4)}
-            </span>
-          )}
-        </div>
-        
-        <div className="navigation-menu">
-          <button 
-            className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+      <div className="header-container">
+        <div className="header-left">
+          <div
+            className="logo-group"
+            role="button"
+            tabIndex={0}
             onClick={() => onNavigate?.('dashboard')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onNavigate?.('dashboard')
+              }
+            }}
           >
-            🏠 Your Hives
-          </button>
-          <button 
-            className={`nav-item ${currentPage === 'marketplace' ? 'active' : ''}`}
-            onClick={() => onNavigate?.('marketplace')}
-          >
-            🛒 Marketplace
-          </button>
-          <button 
-            className={`nav-item ${currentPage === 'wallet' ? 'active' : ''}`}
-            onClick={() => onNavigate?.('wallet')}
-          >
-            💰 Wallet
-          </button>
-          <button className="nav-item">📊 Statistics</button>
+            <span className="logo-icon">🍯</span>
+            <div className="logo-text">
+              <h1>HoneyFarmers</h1>
+              <span className="version-tag">v1.0 Beta</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`header-center ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+          <nav className="navigation-menu">
+            <button 
+              className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+              onClick={() => onNavigate?.('dashboard')}
+            >
+              <span className="nav-icon">🏠</span>
+              <span className="nav-text">Apiary</span>
+            </button>
+            <button 
+              className={`nav-item ${currentPage === 'marketplace' ? 'active' : ''}`}
+              onClick={() => onNavigate?.('marketplace')}
+            >
+              <span className="nav-icon">🛒</span>
+              <span className="nav-text">Market</span>
+            </button>
+            <button 
+              className={`nav-item ${currentPage === 'wallet' ? 'active' : ''}`}
+              onClick={() => onNavigate?.('wallet')}
+            >
+              <span className="nav-icon">💰</span>
+              <span className="nav-text">Vault</span>
+            </button>
+            <button
+              className={`nav-item ${currentPage === 'stats' ? 'active' : ''}`}
+              onClick={() => onNavigate?.('stats')}
+            >
+              <span className="nav-icon">📊</span>
+              <span className="nav-text">Stats</span>
+            </button>
+          </nav>
         </div>
         
-        <button className="logout-btn" onClick={onLogout}>Logout</button>
+        <div className="header-right">
+          <div className="user-profile">
+            <div className="user-avatar">
+              <span className="avatar-icon">🐝</span>
+            </div>
+            <div className="user-meta">
+              <span className="username">{session.actor.toString()}</span>
+              <span className="network-badge">{selectedNetwork}</span>
+            </div>
+          </div>
+          
+          <button className="logout-btn" onClick={onLogout} title="Sign Out">
+            <span className="logout-icon">🚪</span>
+          </button>
+
+          <button 
+            className={`mobile-menu-toggle ${mobileMenuOpen ? 'active' : ''}`}
+            onClick={onMobileMenuToggle}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
       </div>
     </div>
   )
