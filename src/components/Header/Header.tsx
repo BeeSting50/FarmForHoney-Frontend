@@ -95,10 +95,13 @@ function Header({
               <span className="nav-icon">💰</span>
               <span className="nav-text">Vault</span>
             </button>
-            <button
-              className={`nav-item nav-item-disabled ${currentPage === 'stats' ? 'active' : ''}`}
-              onClick={() => onNavigate?.('stats')}
-            >
+              <button
+                className={`nav-item nav-item-disabled ${currentPage === 'stats' ? 'active' : ''}`}
+                onClick={() => onNavigate?.('stats')}
+                disabled
+                aria-disabled="true"
+                title="Stats coming soon" 
+             >
               <span className="nav-icon">📊</span>
               <span className="nav-text">Stats (Soon)</span>
             </button>

@@ -72,7 +72,7 @@ const Wallet: React.FC<WalletProps> = ({
     setIsLoadingBalances(true)
     try {
       const results = await Promise.allSettled(
-        TOKEN_OPTIONS.map((token: { symbol: string; name: string; contract: string }) =>
+        TOKEN_OPTIONS.map((token) =>
           session.client.v1.chain.get_currency_balance(
             token.contract,
             session.actor.toString(),
@@ -138,6 +138,7 @@ const Wallet: React.FC<WalletProps> = ({
       await onDeposit(depositToken, depositAmount)
       setSuccess(`Successfully deposited ${depositAmount} ${depositToken}`)
       setDepositAmount('')
+      fetchWalletBalances()
     } catch (err) {
       setError(`Failed to deposit: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
