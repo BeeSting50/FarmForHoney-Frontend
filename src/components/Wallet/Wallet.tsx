@@ -97,6 +97,35 @@ const Wallet: React.FC<WalletProps> = ({
         })
       )
       
+      const results = await Promise.allSettled(
+        tokenOptions.map((token) =>
+          session.client.v1.chain.get_currency_balance(
+            token.contract,
+            session.actor.toString(),
+            token.symbol
+          )
+        )
+      )
+
+      const balances: WalletBalance[] = results.map((result, index) => {
+        const token = tokenOptions[index]
+        if (result.status === 'fulfilled') {
+          const amount = result.value.length > 0 ? parseFloat(result.value[0].toString().split(' ')[0]) : 0
+          return {
+            symbol: token.symbol,
+            amount,
+            contract: token.contract
+          }
+        }
+
+        console.warn(`Failed to fetch ${token.symbol} balance:`, result.reason)
+        return {
+          symbol: token.symbol,
+          amount: 0,
+          contract: token.contract
+        }
+      })
+
       setWalletBalances(balances)
     } catch (err) {
       console.error('Failed to fetch wallet balances:', err)

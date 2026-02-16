@@ -142,6 +142,7 @@ function App() {
   const fetchWithTimeout = async (url: string, timeoutMs = 10000) => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
     try {
       return await fetch(url, { signal: controller.signal })
     } finally {
@@ -163,6 +164,8 @@ function App() {
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i]
       const endpointUrl = endpoint.url
+      const abortController = new AbortController()
+      const timeoutHandle = setTimeout(() => abortController.abort(), timeout)
       
       try {
         let timer: ReturnType<typeof setTimeout> | undefined
@@ -182,13 +185,19 @@ function App() {
           }
         }
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        const errorMsg = abortController.signal.aborted
+          ? `Timeout after ${timeout}ms`
+          : error instanceof Error
+            ? error.message
+            : 'Unknown error'
         lastError = error instanceof Error ? error : new Error(errorMsg)
         
         // If this isn't the last endpoint, continue to next
         if (i < endpoints.length - 1) {
           continue
         }
+      } finally {
+        clearTimeout(timeoutHandle)
       }
     }
     
@@ -647,12 +656,9 @@ function App() {
     
     setLoadingBees(true)
     try {
-      const allBeeIds: string[] = []
-      
-      // Collect all bee IDs from all hives
-      hives.forEach(hive => {
-        allBeeIds.push(...hive.staked_items)
-      })
+      const allBeeIds = Array.from(
+        new Set(hives.flatMap((hive) => hive.staked_items))
+      )
       
       // Get the correct API base URL for the selected network
       const apiBaseUrl = selectedNetwork === 'mainnet' 
@@ -1217,7 +1223,7 @@ function App() {
 
     const amounts = [hunyAmount, plnAmount, bwaxAmount, rjAmount]
     if (amounts.some((amount) => !Number.isFinite(amount) || amount < 0)) {
-      throw new Error('Withdrawal amounts must be valid positive numbers')
+      throw new Error('Withdrawal amounts must be valid non-negative numbers')
     }
     
     try {

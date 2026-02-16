@@ -52,7 +52,18 @@ function Header({
     <div className="dashboard-header">
       <div className="header-container">
         <div className="header-left">
-          <div className="logo-group" onClick={() => onNavigate?.('dashboard')}>
+          <div
+            className="logo-group"
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate?.('dashboard')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onNavigate?.('dashboard')
+              }
+            }}
+          >
             <span className="logo-icon">🍯</span>
             <div className="logo-text">
               <h1>HoneyFarmers</h1>
@@ -89,6 +100,8 @@ function Header({
               disabled
               aria-disabled="true"
               title="Stats coming soon"
+              className={`nav-item ${currentPage === 'stats' ? 'active' : ''}`}
+              onClick={() => onNavigate?.('stats')}
             >
               <span className="nav-icon">📊</span>
               <span className="nav-text">Stats (Soon)</span>

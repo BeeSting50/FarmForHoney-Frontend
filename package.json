@@ -30,8 +30,7 @@
     "react-dom": "^19.2.4"
   },
   "overrides": {
-    "eosjs": "^22.1.0",
-    "elliptic": "^6.6.1"
+    "eosjs": "^22.1.0"
   },
   "overridesNotes": {
     "eosjs": "Pinned to avoid regressions with wallet/provider compatibility in transitive dependencies.",
