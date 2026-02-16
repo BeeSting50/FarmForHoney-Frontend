@@ -71,34 +71,8 @@ const Wallet: React.FC<WalletProps> = ({
     
     setIsLoadingBalances(true)
     try {
-      const balances = await Promise.all(
-        TOKEN_OPTIONS.map(async (token): Promise<WalletBalance> => {
-          try {
-            const result = await session.client.v1.chain.get_currency_balance(
-              token.contract,
-              session.actor.toString(),
-              token.symbol
-            )
-
-            const amount = result.length > 0 ? parseFloat(result[0].toString().split(' ')[0]) : 0
-            return {
-              symbol: token.symbol,
-              amount,
-              contract: token.contract
-            }
-          } catch (err) {
-            console.warn(`Failed to fetch ${token.symbol} balance:`, err)
-            return {
-              symbol: token.symbol,
-              amount: 0,
-              contract: token.contract
-            }
-          }
-        })
-      )
-      
       const results = await Promise.allSettled(
-        tokenOptions.map((token) =>
+        TOKEN_OPTIONS.map((token) =>
           session.client.v1.chain.get_currency_balance(
             token.contract,
             session.actor.toString(),
@@ -108,7 +82,7 @@ const Wallet: React.FC<WalletProps> = ({
       )
 
       const balances: WalletBalance[] = results.map((result, index) => {
-        const token = tokenOptions[index]
+        const token = TOKEN_OPTIONS[index]
         if (result.status === 'fulfilled') {
           const amount = result.value.length > 0 ? parseFloat(result.value[0].toString().split(' ')[0]) : 0
           return {
@@ -136,9 +110,12 @@ const Wallet: React.FC<WalletProps> = ({
 
   useEffect(() => {
     if (activeTab === 'deposit') {
-      fetchWalletBalances()
+      const fetchBalances = async () => {
+        await fetchWalletBalances();
+      };
+      fetchBalances();
     }
-  }, [activeTab, fetchWalletBalances])
+  }, [activeTab, fetchWalletBalances]);
 
   const getResourceBalance = (resourceName: string): number => {
     const resource = resourceBalances.find(r => r.resource_name === resourceName)
@@ -164,6 +141,7 @@ const Wallet: React.FC<WalletProps> = ({
       await onDeposit(depositToken, depositAmount)
       setSuccess(`Successfully deposited ${depositAmount} ${depositToken}`)
       setDepositAmount('')
+      await fetchWalletBalances()
     } catch (err) {
       setError(`Failed to deposit: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
