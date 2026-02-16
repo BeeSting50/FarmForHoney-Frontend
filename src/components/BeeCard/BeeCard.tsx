@@ -40,6 +40,7 @@ const BeeCard: React.FC<BeeCardProps> = ({
 }) => {
   const [earningRates, setEarningRates] = React.useState<number[]>([0, 0, 0, 0])
   const [loadingRates, setLoadingRates] = React.useState(false)
+  const [selectedAction, setSelectedAction] = React.useState('')
 
   React.useEffect(() => {
     const fetchEarningRates = async () => {
@@ -72,6 +73,7 @@ const BeeCard: React.FC<BeeCardProps> = ({
               <div className="action-select-wrapper">
                 <select 
                   className="bee-action-select"
+                  value={selectedAction}
                   onChange={(e) => {
                     const action = e.target.value
                     if (action === 'feed' && onFeed && hiveId) {
@@ -79,9 +81,8 @@ const BeeCard: React.FC<BeeCardProps> = ({
                     } else if (action === 'unstake' && onUnstake && hiveId) {
                       onUnstake(hiveId, bee.asset_id)
                     }
-                    e.target.value = '' // Reset selection
+                    setSelectedAction('')
                   }}
-                  defaultValue=""
                 >
                   <option value="" disabled>⚙️</option>
                   <option value="feed">🍯 Feed Hive</option>

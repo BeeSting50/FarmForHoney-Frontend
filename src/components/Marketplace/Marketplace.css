@@ -8,7 +8,7 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .marketplace-container {
@@ -62,7 +62,7 @@ neftyblocks-market {
 }
 
 /* Responsive design */
-@media (max-width: 1024px) {
+@media (width <= 1024px) {
   .marketplace-content {
     padding: 1.5rem;
   }
@@ -73,7 +73,7 @@ neftyblocks-market {
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .marketplace-container h2 {
     font-size: 1.8rem;
   }

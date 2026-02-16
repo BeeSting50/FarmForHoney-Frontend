@@ -32,6 +32,10 @@
   "overrides": {
     "eosjs": "^22.1.0"
   },
+  "overridesNotes": {
+    "eosjs": "Pinned to avoid regressions with wallet/provider compatibility in transitive dependencies.",
+    "elliptic": "Pinned to >=6.6.1 to avoid known vulnerabilities in older elliptic releases."
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/express": "^5.0.6",

@@ -106,7 +106,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       <Header
         session={session}
         selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
         mobileMenuOpen={mobileMenuOpen}
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}
@@ -208,12 +207,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                   })}
               </div>
             </div>
-          ) : stakedHives.length === 0 && (
+          ) : stakedHives.length === 0 ? (
             <div className="no-inventory">
               <div className="empty-state-card">
                 <span className="empty-icon">🏜️</span>
                 <p>Your vault is currently empty.</p>
                 <small>Visit the marketplace to start your beekeeping adventure!</small>
+              </div>
+            </div>
+          ) : (
+            <div className="no-inventory">
+              <div className="empty-state-card">
+                <span className="empty-icon">✅</span>
+                <p>All hives are currently deployed.</p>
+                <small>Unstake a hive to redeploy it from your inventory.</small>
               </div>
             </div>
           )}

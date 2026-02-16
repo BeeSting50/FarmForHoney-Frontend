@@ -1,18 +1,11 @@
 import { Session } from '@wharfkit/session'
 import './Header.css'
 
-interface ResourceBalance {
-  key_id: string
-  amount: string | number
-  resource_name: string
-}
-
 type NetworkType = 'mainnet' | 'testnet'
 
 interface HeaderProps {
   session: Session | null
   selectedNetwork: NetworkType
-  resourceBalances: ResourceBalance[]
   mobileMenuOpen: boolean
   onNetworkChange: (network: NetworkType) => void
   onMobileMenuToggle: () => void
@@ -103,11 +96,15 @@ function Header({
               <span className="nav-text">Vault</span>
             </button>
             <button
+              className="nav-item nav-item-disabled"
+              disabled
+              aria-disabled="true"
+              title="Stats coming soon"
               className={`nav-item ${currentPage === 'stats' ? 'active' : ''}`}
               onClick={() => onNavigate?.('stats')}
             >
               <span className="nav-icon">📊</span>
-              <span className="nav-text">Stats</span>
+              <span className="nav-text">Stats (Soon)</span>
             </button>
           </nav>
         </div>

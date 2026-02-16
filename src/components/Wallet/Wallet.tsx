@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Header from '../Header'
 import { Session } from '@wharfkit/session'
 import './Wallet.css'
@@ -30,6 +30,13 @@ interface WalletProps {
   onWithdraw: (hunyAmount: number, plnAmount: number, bwaxAmount: number, rjAmount: number) => Promise<void>
 }
 
+const TOKEN_OPTIONS = [
+  { symbol: 'HUNY', name: 'Honey', contract: 'farminghoney' },
+  { symbol: 'PLN', name: 'Pollen', contract: 'farminghoney' },
+  { symbol: 'BWAX', name: 'Beeswax', contract: 'farminghoney' },
+  { symbol: 'RJ', name: 'Royal Jelly', contract: 'farminghoney' }
+]
+
 const Wallet: React.FC<WalletProps> = ({
   session,
   selectedNetwork,
@@ -58,19 +65,38 @@ const Wallet: React.FC<WalletProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const tokenOptions = [
-    { symbol: 'HUNY', name: 'Honey', contract: 'farminghoney' },
-    { symbol: 'PLN', name: 'Pollen', contract: 'farminghoney' },
-    { symbol: 'BWAX', name: 'Beeswax', contract: 'farminghoney' },
-    { symbol: 'RJ', name: 'Royal Jelly', contract: 'farminghoney' }
-  ]
-
   // Fetch wallet balances for tokens
-  const fetchWalletBalances = async () => {
+  const fetchWalletBalances = useCallback(async () => {
     if (!session) return
     
     setIsLoadingBalances(true)
     try {
+      const balances = await Promise.all(
+        TOKEN_OPTIONS.map(async (token): Promise<WalletBalance> => {
+          try {
+            const result = await session.client.v1.chain.get_currency_balance(
+              token.contract,
+              session.actor.toString(),
+              token.symbol
+            )
+
+            const amount = result.length > 0 ? parseFloat(result[0].toString().split(' ')[0]) : 0
+            return {
+              symbol: token.symbol,
+              amount,
+              contract: token.contract
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch ${token.symbol} balance:`, err)
+            return {
+              symbol: token.symbol,
+              amount: 0,
+              contract: token.contract
+            }
+          }
+        })
+      )
+      
       const results = await Promise.allSettled(
         tokenOptions.map((token) =>
           session.client.v1.chain.get_currency_balance(
@@ -106,13 +132,13 @@ const Wallet: React.FC<WalletProps> = ({
     } finally {
       setIsLoadingBalances(false)
     }
-  }
+  }, [session])
 
   useEffect(() => {
     if (activeTab === 'deposit') {
       fetchWalletBalances()
     }
-  }, [activeTab, session])
+  }, [activeTab, fetchWalletBalances])
 
   const getResourceBalance = (resourceName: string): number => {
     const resource = resourceBalances.find(r => r.resource_name === resourceName)
@@ -229,7 +255,7 @@ const Wallet: React.FC<WalletProps> = ({
                 </div>
               ) : (
                 <div className="balance-grid">
-                  {tokenOptions.map(token => (
+                  {TOKEN_OPTIONS.map(token => (
                     <div key={token.symbol} className="balance-item">
                       <span className="token-name">{token.name} ({token.symbol})</span>
                       <span className="token-amount">{getWalletBalance(token.symbol).toFixed(4)}</span>
@@ -247,7 +273,7 @@ const Wallet: React.FC<WalletProps> = ({
                   value={depositToken}
                   onChange={(e) => setDepositToken(e.target.value)}
                 >
-                  {tokenOptions.map(token => (
+                  {TOKEN_OPTIONS.map(token => (
                     <option key={token.symbol} value={token.symbol}>
                       {token.name} ({token.symbol}) - Available: {getWalletBalance(token.symbol).toFixed(4)}
                     </option>
@@ -286,7 +312,7 @@ const Wallet: React.FC<WalletProps> = ({
               Withdraw tokens from the game contract back to your wallet.
             </p>
             <div className="withdraw-form">
-              {tokenOptions.map(token => (
+              {TOKEN_OPTIONS.map(token => (
                 <div key={token.symbol} className="form-group">
                   <label htmlFor={`withdraw-${token.symbol}`}>
                     {token.name} ({token.symbol}) - Available: {getResourceBalance(token.symbol).toFixed(4)}
@@ -324,7 +350,6 @@ const Wallet: React.FC<WalletProps> = ({
       <Header
         session={session}
         selectedNetwork={selectedNetwork}
-        resourceBalances={resourceBalances}
         mobileMenuOpen={mobileMenuOpen}
         onNetworkChange={onNetworkChange}
         onMobileMenuToggle={onMobileMenuToggle}
@@ -344,7 +369,7 @@ const Wallet: React.FC<WalletProps> = ({
           <div className="balance-section compact">
             <h3>Current Game Balances</h3>
             <div className="balance-grid compact">
-              {tokenOptions.map(token => (
+              {TOKEN_OPTIONS.map(token => (
                 <div key={token.symbol} className="balance-item compact">
                   <span className="token-name">{token.name} ({token.symbol})</span>
                   <span className="token-amount">{getResourceBalance(token.symbol).toFixed(4)}</span>

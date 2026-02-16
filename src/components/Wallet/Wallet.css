@@ -12,7 +12,7 @@
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wallet-container {
@@ -224,7 +224,7 @@
   margin-bottom: 2.5rem;
   font-weight: 700;
   text-align: center;
-  animation: fadeInDown 0.5s ease;
+  animation: fade-in-down 0.5s ease;
 }
 
 .error-message {
@@ -239,9 +239,15 @@
   border: 1px solid rgb(46 204 113 / 30%);
 }
 
-@keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Wallet Balances List */
@@ -286,7 +292,7 @@
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .wallet-content {
     padding: 1rem;
   }
