@@ -110,9 +110,12 @@ const Wallet: React.FC<WalletProps> = ({
 
   useEffect(() => {
     if (activeTab === 'deposit') {
-      fetchWalletBalances()
+      const fetchBalances = async () => {
+        await fetchWalletBalances();
+      };
+      fetchBalances();
     }
-  }, [activeTab, fetchWalletBalances])
+  }, [activeTab, fetchWalletBalances]);
 
   const getResourceBalance = (resourceName: string): number => {
     const resource = resourceBalances.find(r => r.resource_name === resourceName)
@@ -138,7 +141,7 @@ const Wallet: React.FC<WalletProps> = ({
       await onDeposit(depositToken, depositAmount)
       setSuccess(`Successfully deposited ${depositAmount} ${depositToken}`)
       setDepositAmount('')
-      fetchWalletBalances()
+      await fetchWalletBalances()
     } catch (err) {
       setError(`Failed to deposit: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
